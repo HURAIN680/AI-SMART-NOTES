@@ -1,9 +1,6 @@
 import dotenv from "dotenv";
 
-/**
- * Load env variables FIRST
- * Absolute path avoids issues with spaces in folder names
- */
+
 dotenv.config({
   path: new URL("../.env", import.meta.url)
 });
