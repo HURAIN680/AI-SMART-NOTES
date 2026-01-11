@@ -1,30 +1,38 @@
+import mongoose from "mongoose";
 import Note from "../models/note.model.js";
+import {
+  generateSummary,
+  generateTitle,
+  generateTags
+} from "../services/ai.service.js";
 
-
-// CREATE NOTE
 export const createNote = async (req, res) => {
   try {
+    
     const { title, content } = req.body;
 
-    if (!title || !content) {
-        return res.status(400).json({ message: "Title and content are required" });
-        }
-        
+    if (!content) {
+      return res.status(400).json({ message: "Content is required" });
+    }
+
+    const summary = await generateSummary(content);
+    const aiTitle = title || await generateTitle(content);
+    const tags = await generateTags(content);
 
     const note = await Note.create({
-      title,
+      userId: new mongoose.Types.ObjectId(req.user._id),
+      title: aiTitle,
       content,
-      userId: req.user.id
+      summary,
+      tags
     });
 
     res.status(201).json(note);
-
   } catch (error) {
     console.error("CREATE NOTE ERROR:", error);
-    res.status(500).json({ message: "Failed to create note" });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 // GET ALL NOTES (USER SPECIFIC)
 export const getNotes = async (req, res) => {
