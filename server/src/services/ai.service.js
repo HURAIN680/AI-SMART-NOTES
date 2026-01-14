@@ -8,7 +8,8 @@ export const generateSummary = async (content) => {
     messages: [
       {
         role: "user",
-        content: `Summarize the following text in 2-3 lines:\n${content}`
+        content: `Summarize the following text in 2-3 lines
+        do not start with here is a summary of.. directly start with the summary \n${content}`
       }
     ]
   });
@@ -24,7 +25,8 @@ export const generateTitle = async (content) => {
     messages: [
       {
         role: "user",
-        content: `Generate a short title for the following note:\n${content}`
+        content: `Generate 1 short title for the following note 
+        do not start with "here is a short title...directlty start with title\n${content}`
       }
     ]
   });
@@ -40,7 +42,7 @@ export const generateTags = async (content) => {
     messages: [
       {
         role: "user",
-        content: `Generate 3-5 relevant tags (comma separated) for:\n${content}`
+        content: `Generate 3-5 relevant tags (comma separated) for the note. Do not make a tag saying here are the tags for the given content....:\n${content}`
       }
     ]
   });

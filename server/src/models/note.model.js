@@ -11,6 +11,7 @@ const noteSchema = new mongoose.Schema(
     content: String,
     summary: String,
     tags: [String],
+ 
     isDeleted: {
         type: Boolean,
         default: false

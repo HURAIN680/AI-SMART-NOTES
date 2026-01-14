@@ -34,12 +34,28 @@ export const createNote = async (req, res) => {
   }
 };
 
-// GET ALL NOTES (USER SPECIFIC)
+
+// GET ALL NOTES by user with search
 export const getNotes = async (req, res) => {
   try {
-    const notes = await Note.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    const { search } = req.query;
+
+    const query = {
+      userId: req.user.id
+    };
+
+    if (search && search.trim() !== "") {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { content: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const notes = await Note.find(query).sort({ createdAt: -1 });
+
     res.json(notes);
   } catch (error) {
+    console.error(error.message);
     res.status(500).json({ message: "Failed to fetch notes" });
   }
 };
@@ -65,9 +81,35 @@ export const getNoteById = async (req, res) => {
 // UPDATE NOTE
 export const updateNote = async (req, res) => {
   try {
+    const { title, content } = req.body;
+
+    const updateData = {};
+
+    // Update title only if provided
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+
+    // Update content AND regenerate summary
+    if (content !== undefined) {
+      updateData.content = content;
+      updateData.summary = await generateSummary(content);
+    }
+
+    // regenerate title if title is empty or not provided or updated content to update title 
+    if (title === undefined || title.trim() === "") {
+      updateData.title = await generateTitle(content);
+    }
+    
+    //update tags if content is updated
+    if (content !== undefined) {
+      updateData.tags = await generateTags(content);
+    }
+
+
     const note = await Note.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
-      req.body,
+      updateData,
       { new: true }
     );
 
@@ -99,3 +141,4 @@ export const deleteNote = async (req, res) => {
     res.status(500).json({ message: "Failed to delete note" });
   }
 };
+
