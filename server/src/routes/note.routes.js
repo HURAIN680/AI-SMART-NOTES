@@ -6,8 +6,7 @@ import {
   getNotes,
   getNoteById,
   updateNote,
-  deleteNote,
- 
+  deleteNote
 } from "../controllers/note.controller.js";
 
 
@@ -21,6 +20,8 @@ router.get("/", getNotes);
 router.get("/:id", getNoteById);
 router.put("/:id", updateNote);
 router.delete("/:id", deleteNote);
+
+
 
 
 export default router;

@@ -6,6 +6,7 @@ import {
   generateTags
 } from "../services/ai.service.js";
 
+
 export const createNote = async (req, res) => {
   try {
     
