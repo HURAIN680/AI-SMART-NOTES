@@ -1,54 +1,56 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import {
+  Plus, Search, LogOut, Edit3, Trash2, X,
+  Undo, Redo, Calendar, Tag, FileText, Sparkles
+} from "lucide-react";
 
 function Notes() {
+  const navigate = useNavigate();
+
   const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Toggle create box
   const [showCreateBox, setShowCreateBox] = useState(false);
-
-  // Inline title editing
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
-
-  // Read & Update modal
   const [openNote, setOpenNote] = useState(null);
   const [editContent, setEditContent] = useState("");
 
-  // Undo/Redo stacks for create box
   const [undoStackCreate, setUndoStackCreate] = useState([]);
   const [redoStackCreate, setRedoStackCreate] = useState([]);
-
-  // Undo/Redo stacks for edit modal
   const [undoStackEdit, setUndoStackEdit] = useState([]);
   const [redoStackEdit, setRedoStackEdit] = useState([]);
 
-  // Fetch notes
-  const fetchNotes = async (searchText = "") => {
+  /* ---------------- FETCH NOTES ---------------- */
+  const fetchNotes = async (query = "") => {
     try {
+      setLoading(true);
       const res = await api.get("/notes", {
-        params: { search: searchText },
+        params: { search: query }
       });
       setNotes(res.data);
-    } catch (error) {
+    } catch (err) {
       console.error("Failed to fetch notes");
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const delay = setTimeout(() => {
-      fetchNotes(search);
-    }, 300);
+    const delay = setTimeout(() => fetchNotes(search), 300);
     return () => clearTimeout(delay);
   }, [search]);
 
-  // Create note
+  /* ---------------- CREATE NOTE ---------------- */
   const handleCreateNote = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -61,338 +63,164 @@ function Notes() {
       setUndoStackCreate([]);
       setRedoStackCreate([]);
       setShowCreateBox(false);
-    } catch (error) {
+    } catch {
       console.error("Failed to create note");
     }
   };
 
-  // Delete note
+  /* ---------------- DELETE NOTE ---------------- */
   const handleDeleteNote = async (id) => {
     try {
       await api.delete(`/notes/${id}`);
-      setNotes(notes.filter((note) => note._id !== id));
-    } catch (error) {
-      console.error("Failed to delete note");
+      setNotes(notes.filter((n) => n._id !== id));
+    } catch {
+      console.error("Delete failed");
     }
   };
 
-  // Update title
+  /* ---------------- UPDATE TITLE ---------------- */
   const handleUpdateTitle = async (id) => {
-    if (!editingTitle.trim()) {
-      setEditingNoteId(null);
-      return;
-    }
+    if (!editingTitle.trim()) return setEditingNoteId(null);
 
     try {
-      const res = await api.put(`/notes/${id}`, {
-        title: editingTitle,
-      });
-      setNotes(notes.map((n) => (n._id === id ? res.data : n)));
+      const res = await api.put(`/notes/${id}`, { title: editingTitle });
+      setNotes(notes.map(n => n._id === id ? res.data : n));
       setEditingNoteId(null);
       setEditingTitle("");
-    } catch (error) {
-      console.error("Failed to update title");
+    } catch {
+      console.error("Update title failed");
     }
   };
 
-  // Update content
+  /* ---------------- UPDATE CONTENT ---------------- */
   const handleUpdateContent = async () => {
     if (!editContent.trim()) return;
 
     try {
       const res = await api.put(`/notes/${openNote._id}`, {
-        content: editContent,
+        content: editContent
       });
-
-      setNotes(
-        notes.map((note) =>
-          note._id === openNote._id ? res.data : note
-        )
-      );
-
+      setNotes(notes.map(n => n._id === openNote._id ? res.data : n));
       setOpenNote(null);
-      setEditContent("");
       setUndoStackEdit([]);
       setRedoStackEdit([]);
-    } catch (error) {
-      console.error("Failed to update content");
+    } catch {
+      console.error("Update content failed");
     }
   };
 
-  // Logout
+  /* ---------------- LOGOUT ---------------- */
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    navigate("/login");
   };
 
-  // --- Undo/Redo Handlers for Create Box ---
-  const handleUndoCreate = () => {
-    if (undoStackCreate.length === 0) return;
-    const last = undoStackCreate[undoStackCreate.length - 1];
-    setRedoStackCreate([content, ...redoStackCreate]);
-    setContent(last);
-    setUndoStackCreate(undoStackCreate.slice(0, -1));
+  /* ---------------- UNDO / REDO ---------------- */
+  const undo = (stack, setStack, redo, setRedo, value, setValue) => {
+    if (!stack.length) return;
+    setRedo([value, ...redo]);
+    setValue(stack.at(-1));
+    setStack(stack.slice(0, -1));
   };
 
-  const handleRedoCreate = () => {
-    if (redoStackCreate.length === 0) return;
-    const next = redoStackCreate[0];
-    setUndoStackCreate([...undoStackCreate, content]);
-    setContent(next);
-    setRedoStackCreate(redoStackCreate.slice(1));
+  const redo = (stack, setStack, undo, setUndo, value, setValue) => {
+    if (!stack.length) return;
+    setUndo([...undo, value]);
+    setValue(stack[0]);
+    setStack(stack.slice(1));
   };
 
-  // --- Undo/Redo Handlers for Edit Modal ---
-  const handleUndoEdit = () => {
-    if (undoStackEdit.length === 0) return;
-    const last = undoStackEdit[undoStackEdit.length - 1];
-    setRedoStackEdit([editContent, ...redoStackEdit]);
-    setEditContent(last);
-    setUndoStackEdit(undoStackEdit.slice(0, -1));
-  };
-
-  const handleRedoEdit = () => {
-    if (redoStackEdit.length === 0) return;
-    const next = redoStackEdit[0];
-    setUndoStackEdit([...undoStackEdit, editContent]);
-    setEditContent(next);
-    setRedoStackEdit(redoStackEdit.slice(1));
-  };
-
+  /* ---------------- UI ---------------- */
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">My Notes</h1>
-          <button
-            onClick={handleLogout}
-            className="text-red-600 hover:underline"
-          >
-            Logout
-          </button>
-        </div>
+    <div className="min-h-screen bg-slate-950 p-6 text-white">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-4xl font-bold">My Notes</h1>
+        <button onClick={handleLogout} className="text-red-400 flex gap-2">
+          <LogOut size={18} /> Logout
+        </button>
+      </div>
 
-        {/* Search */}
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-4 top-3 text-slate-400" />
         <input
-          type="text"
-          placeholder="Search notes by title or content..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full mb-6 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search notes..."
+          className="w-full pl-12 py-3 rounded-xl bg-white/5 border border-white/10"
         />
+      </div>
 
-        {/* + New Note Button */}
-        <button
-          onClick={() => setShowCreateBox(!showCreateBox)}
-          className="mb-6 flex items-center gap-2 text-blue-600 font-medium hover:underline"
-        >
-          <span className="text-xl">+</span>
-          New Note
-        </button>
+      {/* New Note */}
+      <button
+        onClick={() => setShowCreateBox(!showCreateBox)}
+        className="mb-6 flex items-center gap-2 bg-violet-600 px-6 py-3 rounded-xl"
+      >
+        <Plus /> New Note <Sparkles size={16} />
+      </button>
 
-        {/* Create Note Box */}
-        {showCreateBox && (
-          <form
-            onSubmit={handleCreateNote}
-            className="bg-white p-5 rounded-lg shadow mb-8 relative"
-          >
-            <h2 className="text-lg font-semibold mb-4">Create a Note</h2>
+      {/* Create Box */}
+      {showCreateBox && (
+        <form onSubmit={handleCreateNote} className="bg-white/10 p-6 rounded-xl mb-6">
+          <input
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full mb-3 px-4 py-2 bg-white/5 rounded-lg"
+          />
+          <textarea
+            rows={5}
+            value={content}
+            onChange={(e) => {
+              setUndoStackCreate([...undoStackCreate, content]);
+              setContent(e.target.value);
+              setRedoStackCreate([]);
+            }}
+            className="w-full px-4 py-2 bg-white/5 rounded-lg"
+          />
+          <div className="mt-4 flex gap-3">
+            <button className="bg-violet-600 px-4 py-2 rounded-lg">Save</button>
+            <button type="button" onClick={() => setShowCreateBox(false)}>Cancel</button>
+          </div>
+        </form>
+      )}
 
-            {/* Undo/Redo top-right */}
-            <div className="absolute top-5 right-5 flex gap-2">
-              <button
-                type="button"
-                onClick={handleUndoCreate}
-                className="px-3 py-1 hover:bg-gray-200 rounded"
-              >
-                ↩️
-              </button>
-              <button
-                type="button"
-                onClick={handleRedoCreate}
-                className="px-3 py-1 hover:bg-gray-200 rounded"
-              >
-                ↪️
-              </button>
-            </div>
-
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <input
-                type="text"
-                placeholder="Title (optional)"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full mb-3 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <textarea
-                placeholder="Write your note here..."
-                value={content}
-                onChange={(e) => {
-                  setUndoStackCreate([...undoStackCreate, content]);
-                  setContent(e.target.value);
-                  setRedoStackCreate([]);
-                }}
-                rows="4"
-                className="w-full p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex gap-3 mt-4">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700"
-              >
-                Save Note
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreateBox(false)}
-                className="px-5 py-2 border rounded"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Notes List */}
-        {loading ? (
-          <p className="text-center text-gray-500">Loading notes...</p>
-        ) : notes.length === 0 ? (
-          <p className="text-center text-gray-500">No notes yet</p>
-        ) : (
-          notes.map((note) => (
+      {/* Notes */}
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="grid gap-4">
+          {notes.map(note => (
             <div
               key={note._id}
               onClick={() => {
                 setOpenNote(note);
                 setEditContent(note.content);
-                setUndoStackEdit([]);
-                setRedoStackEdit([]);
               }}
-              className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer hover:bg-gray-50"
+              className="bg-white/10 p-5 rounded-xl cursor-pointer"
             >
-              <p className="text-xs text-gray-500 mb-1">
-                {new Date(note.createdAt).toLocaleString()}
-              </p>
-
-              {editingNoteId === note._id ? (
-                <input
-                  value={editingTitle}
-                  autoFocus
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onBlur={() => handleUpdateTitle(note._id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleUpdateTitle(note._id);
-                  }}
-                  className="w-full text-lg font-semibold p-1 border rounded"
-                />
-              ) : (
-                <>
-                  <h3
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingNoteId(note._id);
-                      setEditingTitle(note.title || "");
-                    }}
-                    className="text-lg font-semibold hover:text-blue-600"
-                  >
-                    {note.title || "Untitled"}
-                  </h3>
-                  <p className="text-xs text-gray-400 mb-2">
-                    Click title to edit
-                  </p>
-                </>
-              )}
-
-              {note.summary && (
-                <p className="text-sm text-gray-700 mb-3">{note.summary}</p>
-              )}
-
-              {note.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {note.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="text-xs bg-gray-200 px-2 py-1 rounded"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteNote(note._id);
-                }}
-                className="text-sm text-red-600 hover:underline"
-              >
-                Delete
-              </button>
+              <h3 className="text-xl font-semibold">{note.title || "Untitled"}</h3>
+              {note.summary && <p className="text-slate-400">{note.summary}</p>}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Modal for editing note */}
+      {/* Edit Modal */}
       {openNote && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-lg rounded-lg p-6 shadow-lg relative">
-            <div className="flex justify-between mb-2">
-              <h2 className="text-lg font-semibold">{openNote.title || "Untitled"}</h2>
-
-              {/* Undo/Redo for edit modal at top-right */}
-              <div className="flex gap-2 ml-auto mr-4">
-                <button
-                  type="button"
-                  onClick={handleUndoEdit}
-                  className="px-3 py-1 hover:bg-gray-200 rounded"
-                >
-                  ↩️
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRedoEdit}
-                  className="px-3 py-1 hover:bg-gray-200 rounded"
-                >
-                  ↪️
-                </button>
-              </div>
-
-              <button onClick={() => setOpenNote(null)}>✕</button>
-            </div>
-
-            <p className="text-xs text-gray-500 mb-3">
-              {new Date(openNote.createdAt).toLocaleString()}
-            </p>
-
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
+          <div className="bg-slate-900 p-6 rounded-xl w-full max-w-2xl">
             <textarea
+              rows={10}
               value={editContent}
-              onChange={(e) => {
-                setUndoStackEdit([...undoStackEdit, editContent]);
-                setEditContent(e.target.value);
-                setRedoStackEdit([]);
-              }}
-              rows="6"
-              className="w-full p-3 border rounded resize-none"
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full bg-white/5 p-4 rounded-lg"
             />
-
             <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setOpenNote(null)}
-                className="px-4 py-2 border rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateContent}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
-                Save Changes
+              <button onClick={() => setOpenNote(null)}>Cancel</button>
+              <button onClick={handleUpdateContent} className="bg-violet-600 px-4 py-2 rounded-lg">
+                Save
               </button>
             </div>
           </div>
