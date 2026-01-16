@@ -1,260 +1,398 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import {
-  Plus,
-  Search,
-  LogOut,
-  Trash2,
-  Tag,
-} from "lucide-react";
 
 function Notes() {
-  const navigate = useNavigate();
-
   const [notes, setNotes] = useState([]);
-  const [loading, setLoading] = useState(true);
-
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [tagsInput, setTagsInput] = useState("");
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const [showCreate, setShowCreate] = useState(false);
+  // Toggle create box
+  const [showCreateBox, setShowCreateBox] = useState(false);
+
+  // Inline title editing
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
+  // Read & Update modal
   const [openNote, setOpenNote] = useState(null);
   const [editContent, setEditContent] = useState("");
 
-  /* ---------------- FETCH NOTES ---------------- */
-  const fetchNotes = async (query = "") => {
+  // Undo/Redo stacks for create box
+  const [undoStackCreate, setUndoStackCreate] = useState([]);
+  const [redoStackCreate, setRedoStackCreate] = useState([]);
+
+  // Undo/Redo stacks for edit modal
+  const [undoStackEdit, setUndoStackEdit] = useState([]);
+  const [redoStackEdit, setRedoStackEdit] = useState([]);
+
+  // Fetch notes
+  const fetchNotes = async (searchText = "") => {
     try {
-      setLoading(true);
       const res = await api.get("/notes", {
-        params: { search: query },
+        params: { search: searchText },
       });
       setNotes(res.data);
-    } catch (err) {
-      if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        navigate("/login");
-      }
+    } catch (error) {
+      console.error("Failed to fetch notes");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const delay = setTimeout(() => fetchNotes(search), 300);
+    const delay = setTimeout(() => {
+      fetchNotes(search);
+    }, 300);
     return () => clearTimeout(delay);
   }, [search]);
 
-  /* ---------------- CREATE NOTE ---------------- */
+  // Create note
   const handleCreateNote = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
 
-    const tags = tagsInput
-      .split(",")
-      .map(t => t.trim())
-      .filter(Boolean);
-
     try {
-      const res = await api.post("/notes", {
-        title,
-        content,
-        tags,
-      });
-
+      const res = await api.post("/notes", { title, content });
       setNotes([res.data, ...notes]);
       setTitle("");
       setContent("");
-      setTagsInput("");
-      setShowCreate(false);
-    } catch {
-      console.error("Create failed");
+      setUndoStackCreate([]);
+      setRedoStackCreate([]);
+      setShowCreateBox(false);
+    } catch (error) {
+      console.error("Failed to create note");
     }
   };
 
-  /* ---------------- DELETE NOTE ---------------- */
+  // Delete note
   const handleDeleteNote = async (id) => {
     try {
-      await api.put(`/notes/${id}`, { isDeleted: true });
-      setNotes(notes.filter(n => n._id !== id));
-    } catch {
-      console.error("Delete failed");
+      await api.delete(`/notes/${id}`);
+      setNotes(notes.filter((note) => note._id !== id));
+    } catch (error) {
+      console.error("Failed to delete note");
     }
   };
 
-  /* ---------------- UPDATE CONTENT ---------------- */
+  // Update title
+  const handleUpdateTitle = async (id) => {
+    if (!editingTitle.trim()) {
+      setEditingNoteId(null);
+      return;
+    }
+
+    try {
+      const res = await api.put(`/notes/${id}`, {
+        title: editingTitle,
+      });
+      setNotes(notes.map((n) => (n._id === id ? res.data : n)));
+      setEditingNoteId(null);
+      setEditingTitle("");
+    } catch (error) {
+      console.error("Failed to update title");
+    }
+  };
+
+  // Update content
   const handleUpdateContent = async () => {
+    if (!editContent.trim()) return;
+
     try {
       const res = await api.put(`/notes/${openNote._id}`, {
         content: editContent,
       });
 
-      setNotes(notes.map(n =>
-        n._id === openNote._id ? res.data : n
-      ));
+      setNotes(
+        notes.map((note) =>
+          note._id === openNote._id ? res.data : note
+        )
+      );
+
       setOpenNote(null);
-    } catch {
-      console.error("Update failed");
+      setEditContent("");
+      setUndoStackEdit([]);
+      setRedoStackEdit([]);
+    } catch (error) {
+      console.error("Failed to update content");
     }
   };
 
-  /* ---------------- LOGOUT ---------------- */
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/login");
+    window.location.href = "/login";
   };
 
-  /* ---------------- UI ---------------- */
-  return (
-    <div className="min-h-screen bg-slate-950 text-white p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-bold">My Notes</h1>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-red-400"
-        >
-          <LogOut size={18} /> Logout
-        </button>
-      </div>
+  // --- Undo/Redo Handlers for Create Box ---
+  const handleUndoCreate = () => {
+    if (undoStackCreate.length === 0) return;
+    const last = undoStackCreate[undoStackCreate.length - 1];
+    setRedoStackCreate([content, ...redoStackCreate]);
+    setContent(last);
+    setUndoStackCreate(undoStackCreate.slice(0, -1));
+  };
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-4 top-3 text-slate-400" />
+  const handleRedoCreate = () => {
+    if (redoStackCreate.length === 0) return;
+    const next = redoStackCreate[0];
+    setUndoStackCreate([...undoStackCreate, content]);
+    setContent(next);
+    setRedoStackCreate(redoStackCreate.slice(1));
+  };
+
+  // --- Undo/Redo Handlers for Edit Modal ---
+  const handleUndoEdit = () => {
+    if (undoStackEdit.length === 0) return;
+    const last = undoStackEdit[undoStackEdit.length - 1];
+    setRedoStackEdit([editContent, ...redoStackEdit]);
+    setEditContent(last);
+    setUndoStackEdit(undoStackEdit.slice(0, -1));
+  };
+
+  const handleRedoEdit = () => {
+    if (redoStackEdit.length === 0) return;
+    const next = redoStackEdit[0];
+    setUndoStackEdit([...undoStackEdit, editContent]);
+    setEditContent(next);
+    setRedoStackEdit(redoStackEdit.slice(1));
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">My Notes</h1>
+          <button
+            onClick={handleLogout}
+            className="text-red-600 hover:underline"
+          >
+            Logout
+          </button>
+        </div>
+
+        {/* Search */}
         <input
+          type="text"
+          placeholder="Search notes by title or content..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search notes..."
-          className="w-full pl-12 py-3 rounded-xl bg-white/5 border border-white/10"
+          className="w-full mb-6 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-      </div>
 
-      {/* New Note */}
-      <button
-        onClick={() => setShowCreate(!showCreate)}
-        className="mb-6 flex items-center gap-2 bg-violet-600 px-6 py-3 rounded-xl"
-      >
-        <Plus /> New Note
-      </button>
-
-      {/* Create Note */}
-      {showCreate && (
-        <form
-          onSubmit={handleCreateNote}
-          className="bg-white/10 p-6 rounded-xl mb-6"
+        {/* + New Note Button */}
+        <button
+          onClick={() => setShowCreateBox(!showCreateBox)}
+          className="mb-6 flex items-center gap-2 text-blue-600 font-medium hover:underline"
         >
-          <input
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full mb-3 px-4 py-2 bg-white/5 rounded-lg"
-          />
+          <span className="text-xl">+</span>
+          New Note
+        </button>
 
-          <textarea
-            rows={5}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Write your note..."
-            className="w-full mb-3 px-4 py-2 bg-white/5 rounded-lg"
-          />
+        {/* Create Note Box */}
+        {showCreateBox && (
+          <form
+            onSubmit={handleCreateNote}
+            className="bg-white p-5 rounded-lg shadow mb-8 relative"
+          >
+            <h2 className="text-lg font-semibold mb-4">Create a Note</h2>
 
-          <input
-            placeholder="Tags (comma separated)"
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            className="w-full mb-4 px-4 py-2 bg-white/5 rounded-lg"
-          />
+            {/* Undo/Redo top-right */}
+            <div className="absolute top-5 right-5 flex gap-2">
+              <button
+                type="button"
+                onClick={handleUndoCreate}
+                className="px-3 py-1 hover:bg-gray-200 rounded"
+              >
+                ↩️
+              </button>
+              <button
+                type="button"
+                onClick={handleRedoCreate}
+                className="px-3 py-1 hover:bg-gray-200 rounded"
+              >
+                ↪️
+              </button>
+            </div>
 
-          <div className="flex gap-3">
-            <button className="bg-violet-600 px-4 py-2 rounded-lg">
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <input
+                type="text"
+                placeholder="Title (optional)"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full mb-3 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
 
-      {/* Notes List */}
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <div className="grid gap-4">
-          {notes.map(note => (
+              <textarea
+                placeholder="Write your note here..."
+                value={content}
+                onChange={(e) => {
+                  setUndoStackCreate([...undoStackCreate, content]);
+                  setContent(e.target.value);
+                  setRedoStackCreate([]);
+                }}
+                rows="4"
+                className="w-full p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700"
+              >
+                Save Note
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateBox(false)}
+                className="px-5 py-2 border rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Notes List */}
+        {loading ? (
+          <p className="text-center text-gray-500">Loading notes...</p>
+        ) : notes.length === 0 ? (
+          <p className="text-center text-gray-500">No notes yet</p>
+        ) : (
+          notes.map((note) => (
             <div
               key={note._id}
-              className="bg-white/10 p-5 rounded-xl"
+              onClick={() => {
+                setOpenNote(note);
+                setEditContent(note.content);
+                setUndoStackEdit([]);
+                setRedoStackEdit([]);
+              }}
+              className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer hover:bg-gray-50"
             >
-              {/* Title + Delete */}
-              <div className="flex justify-between items-start mb-2">
-                <h3
-                  onClick={() => {
-                    setOpenNote(note);
-                    setEditContent(note.content);
+              <p className="text-xs text-gray-500 mb-1">
+                {new Date(note.createdAt).toLocaleString()}
+              </p>
+
+              {editingNoteId === note._id ? (
+                <input
+                  value={editingTitle}
+                  autoFocus
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={() => handleUpdateTitle(note._id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleUpdateTitle(note._id);
                   }}
-                  className="text-xl font-semibold cursor-pointer hover:text-violet-300 transition"
-                >
-                  {note.title || "Untitled"}
-                </h3>
-
-                <button
-                  onClick={() => handleDeleteNote(note._id)}
-                  className="text-red-400 hover:text-red-500"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-
-              {/* SUMMARY */}
-              {note.summary && (
-                <p className="text-slate-300 text-sm mb-3 line-clamp-2">
-                  {note.summary}
-                </p>
+                  className="w-full text-lg font-semibold p-1 border rounded"
+                />
+              ) : (
+                <>
+                  <h3
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingNoteId(note._id);
+                      setEditingTitle(note.title || "");
+                    }}
+                    className="text-lg font-semibold hover:text-blue-600"
+                  >
+                    {note.title || "Untitled"}
+                  </h3>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Click title to edit
+                  </p>
+                </>
               )}
 
-              {/* TAGS */}
+              {note.summary && (
+                <p className="text-sm text-gray-700 mb-3">{note.summary}</p>
+              )}
+
               {note.tags?.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {note.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="text-xs bg-violet-500/20 border border-violet-500/30 text-violet-300 px-3 py-1 rounded-full flex items-center gap-1"
+                      className="text-xs bg-gray-200 px-2 py-1 rounded"
                     >
-                      <Tag size={12} />
-                      {tag}
+                      #{tag}
                     </span>
                   ))}
                 </div>
               )}
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* Edit Modal */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteNote(note._id);
+                }}
+                className="text-sm text-red-600 hover:underline"
+              >
+                Delete
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal for editing note */}
       {openNote && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-slate-900 p-6 rounded-xl w-full max-w-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-lg rounded-lg p-6 shadow-lg relative">
+            <div className="flex justify-between mb-2">
+              <h2 className="text-lg font-semibold">{openNote.title || "Untitled"}</h2>
+
+              {/* Undo/Redo for edit modal at top-right */}
+              <div className="flex gap-2 ml-auto mr-4">
+                <button
+                  type="button"
+                  onClick={handleUndoEdit}
+                  className="px-3 py-1 hover:bg-gray-200 rounded"
+                >
+                  ↩️
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRedoEdit}
+                  className="px-3 py-1 hover:bg-gray-200 rounded"
+                >
+                  ↪️
+                </button>
+              </div>
+
+              <button onClick={() => setOpenNote(null)}>✕</button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-3">
+              {new Date(openNote.createdAt).toLocaleString()}
+            </p>
+
             <textarea
-              rows={10}
               value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="w-full bg-white/5 p-4 rounded-lg"
+              onChange={(e) => {
+                setUndoStackEdit([...undoStackEdit, editContent]);
+                setEditContent(e.target.value);
+                setRedoStackEdit([]);
+              }}
+              rows="6"
+              className="w-full p-3 border rounded resize-none"
             />
 
             <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => setOpenNote(null)}>Cancel</button>
+              <button
+                onClick={() => setOpenNote(null)}
+                className="px-4 py-2 border rounded"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleUpdateContent}
-                className="bg-violet-600 px-4 py-2 rounded-lg"
+                className="px-4 py-2 bg-blue-600 text-white rounded"
               >
-                Save
+                Save Changes
               </button>
             </div>
           </div>
