@@ -3,39 +3,34 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import {
   Plus, Search, LogOut, Edit3, Trash2, X,
-  Undo, Redo, Calendar, Tag, FileText, Sparkles
+  Calendar, Tag
 } from "lucide-react";
 
 function Notes() {
   const navigate = useNavigate();
 
   const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
 
-  const [showCreateBox, setShowCreateBox] = useState(false);
-  const [editingNoteId, setEditingNoteId] = useState(null);
-  const [editingTitle, setEditingTitle] = useState("");
+  const [search, setSearch] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+
   const [openNote, setOpenNote] = useState(null);
   const [editContent, setEditContent] = useState("");
-
-  const [undoStackCreate, setUndoStackCreate] = useState([]);
-  const [redoStackCreate, setRedoStackCreate] = useState([]);
-  const [undoStackEdit, setUndoStackEdit] = useState([]);
-  const [redoStackEdit, setRedoStackEdit] = useState([]);
 
   /* ---------------- FETCH NOTES ---------------- */
   const fetchNotes = async (query = "") => {
     try {
       setLoading(true);
       const res = await api.get("/notes", {
-        params: { search: query }
+        params: { search: query },
       });
       setNotes(res.data);
     } catch (err) {
-      console.error("Failed to fetch notes");
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         navigate("/login");
@@ -55,57 +50,51 @@ function Notes() {
     e.preventDefault();
     if (!content.trim()) return;
 
+    const tags = tagsInput
+      .split(",")
+      .map(t => t.trim())
+      .filter(Boolean);
+
     try {
-      const res = await api.post("/notes", { title, content });
+      const res = await api.post("/notes", {
+        title,
+        content,
+        tags,
+      });
+
       setNotes([res.data, ...notes]);
       setTitle("");
       setContent("");
-      setUndoStackCreate([]);
-      setRedoStackCreate([]);
-      setShowCreateBox(false);
+      setTagsInput("");
+      setShowCreate(false);
     } catch {
-      console.error("Failed to create note");
+      console.error("Create failed");
     }
   };
 
-  /* ---------------- DELETE NOTE ---------------- */
+  /* ---------------- DELETE NOTE (SOFT) ---------------- */
   const handleDeleteNote = async (id) => {
     try {
-      await api.delete(`/notes/${id}`);
-      setNotes(notes.filter((n) => n._id !== id));
+      await api.put(`/notes/${id}`, { isDeleted: true });
+      setNotes(notes.filter(n => n._id !== id));
     } catch {
       console.error("Delete failed");
     }
   };
 
-  /* ---------------- UPDATE TITLE ---------------- */
-  const handleUpdateTitle = async (id) => {
-    if (!editingTitle.trim()) return setEditingNoteId(null);
-
-    try {
-      const res = await api.put(`/notes/${id}`, { title: editingTitle });
-      setNotes(notes.map(n => n._id === id ? res.data : n));
-      setEditingNoteId(null);
-      setEditingTitle("");
-    } catch {
-      console.error("Update title failed");
-    }
-  };
-
   /* ---------------- UPDATE CONTENT ---------------- */
   const handleUpdateContent = async () => {
-    if (!editContent.trim()) return;
-
     try {
       const res = await api.put(`/notes/${openNote._id}`, {
-        content: editContent
+        content: editContent,
       });
-      setNotes(notes.map(n => n._id === openNote._id ? res.data : n));
+
+      setNotes(notes.map(n =>
+        n._id === openNote._id ? res.data : n
+      ));
       setOpenNote(null);
-      setUndoStackEdit([]);
-      setRedoStackEdit([]);
     } catch {
-      console.error("Update content failed");
+      console.error("Update failed");
     }
   };
 
@@ -115,28 +104,16 @@ function Notes() {
     navigate("/login");
   };
 
-  /* ---------------- UNDO / REDO ---------------- */
-  const undo = (stack, setStack, redo, setRedo, value, setValue) => {
-    if (!stack.length) return;
-    setRedo([value, ...redo]);
-    setValue(stack.at(-1));
-    setStack(stack.slice(0, -1));
-  };
-
-  const redo = (stack, setStack, undo, setUndo, value, setValue) => {
-    if (!stack.length) return;
-    setUndo([...undo, value]);
-    setValue(stack[0]);
-    setStack(stack.slice(1));
-  };
-
   /* ---------------- UI ---------------- */
   return (
-    <div className="min-h-screen bg-slate-950 p-6 text-white">
+    <div className="min-h-screen bg-slate-950 text-white p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold">My Notes</h1>
-        <button onClick={handleLogout} className="text-red-400 flex gap-2">
+        <button
+          onClick={handleLogout}
+          className="text-red-400 flex gap-2"
+        >
           <LogOut size={18} /> Logout
         </button>
       </div>
@@ -154,34 +131,50 @@ function Notes() {
 
       {/* New Note */}
       <button
-        onClick={() => setShowCreateBox(!showCreateBox)}
-        className="mb-6 flex items-center gap-2 bg-violet-600 px-6 py-3 rounded-xl"
+        onClick={() => setShowCreate(!showCreate)}
+        className="mb-6 bg-violet-600 px-6 py-3 rounded-xl"
       >
-        <Plus /> New Note <Sparkles size={16} />
+        <Plus /> New Note
       </button>
 
-      {/* Create Box */}
-      {showCreateBox && (
-        <form onSubmit={handleCreateNote} className="bg-white/10 p-6 rounded-xl mb-6">
+      {/* Create Note */}
+      {showCreate && (
+        <form
+          onSubmit={handleCreateNote}
+          className="bg-white/10 p-6 rounded-xl mb-6"
+        >
           <input
             placeholder="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full mb-3 px-4 py-2 bg-white/5 rounded-lg"
           />
+
           <textarea
             rows={5}
             value={content}
-            onChange={(e) => {
-              setUndoStackCreate([...undoStackCreate, content]);
-              setContent(e.target.value);
-              setRedoStackCreate([]);
-            }}
-            className="w-full px-4 py-2 bg-white/5 rounded-lg"
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Write your note..."
+            className="w-full mb-3 px-4 py-2 bg-white/5 rounded-lg"
           />
-          <div className="mt-4 flex gap-3">
-            <button className="bg-violet-600 px-4 py-2 rounded-lg">Save</button>
-            <button type="button" onClick={() => setShowCreateBox(false)}>Cancel</button>
+
+          <input
+            placeholder="Tags (comma separated)"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            className="w-full mb-4 px-4 py-2 bg-white/5 rounded-lg"
+          />
+
+          <div className="flex gap-3">
+            <button className="bg-violet-600 px-4 py-2 rounded-lg">
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+            >
+              Cancel
+            </button>
           </div>
         </form>
       )}
@@ -194,14 +187,39 @@ function Notes() {
           {notes.map(note => (
             <div
               key={note._id}
-              onClick={() => {
-                setOpenNote(note);
-                setEditContent(note.content);
-              }}
-              className="bg-white/10 p-5 rounded-xl cursor-pointer"
+              className="bg-white/10 p-5 rounded-xl"
             >
-              <h3 className="text-xl font-semibold">{note.title || "Untitled"}</h3>
-              {note.summary && <p className="text-slate-400">{note.summary}</p>}
+              <div className="flex justify-between">
+                <h3
+                  onClick={() => {
+                    setOpenNote(note);
+                    setEditContent(note.content);
+                  }}
+                  className="text-xl font-semibold cursor-pointer"
+                >
+                  {note.title || "Untitled"}
+                </h3>
+
+                <button
+                  onClick={() => handleDeleteNote(note._id)}
+                  className="text-red-400"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {note.tags?.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {note.tags.map((tag, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-violet-500/20 px-3 py-1 rounded-full flex items-center gap-1"
+                    >
+                      <Tag size={12} /> {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -217,9 +235,13 @@ function Notes() {
               onChange={(e) => setEditContent(e.target.value)}
               className="w-full bg-white/5 p-4 rounded-lg"
             />
+
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={() => setOpenNote(null)}>Cancel</button>
-              <button onClick={handleUpdateContent} className="bg-violet-600 px-4 py-2 rounded-lg">
+              <button
+                onClick={handleUpdateContent}
+                className="bg-violet-600 px-4 py-2 rounded-lg"
+              >
                 Save
               </button>
             </div>
