@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../api/axios";
 
 function Notes() {
@@ -8,31 +8,31 @@ function Notes() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Toggle create box
+  // Create note toggle
   const [showCreateBox, setShowCreateBox] = useState(false);
 
   // Inline title editing
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
 
-  // Read & Update modal
+  // Edit modal
   const [openNote, setOpenNote] = useState(null);
   const [editContent, setEditContent] = useState("");
 
-  // Undo/Redo stacks for create box
+  // Undo/Redo stacks
   const [undoStackCreate, setUndoStackCreate] = useState([]);
   const [redoStackCreate, setRedoStackCreate] = useState([]);
-
-  // Undo/Redo stacks for edit modal
   const [undoStackEdit, setUndoStackEdit] = useState([]);
   const [redoStackEdit, setRedoStackEdit] = useState([]);
+
+  // Find words
+  const [showFind, setShowFind] = useState(false);
+  const [findWord, setFindWord] = useState("");
 
   // Fetch notes
   const fetchNotes = async (searchText = "") => {
     try {
-      const res = await api.get("/notes", {
-        params: { search: searchText },
-      });
+      const res = await api.get("/notes", { params: { search: searchText } });
       setNotes(res.data);
     } catch (error) {
       console.error("Failed to fetch notes");
@@ -42,9 +42,7 @@ function Notes() {
   };
 
   useEffect(() => {
-    const delay = setTimeout(() => {
-      fetchNotes(search);
-    }, 300);
+    const delay = setTimeout(() => fetchNotes(search), 300);
     return () => clearTimeout(delay);
   }, [search]);
 
@@ -52,7 +50,6 @@ function Notes() {
   const handleCreateNote = async (e) => {
     e.preventDefault();
     if (!content.trim()) return;
-
     try {
       const res = await api.post("/notes", { title, content });
       setNotes([res.data, ...notes]);
@@ -82,11 +79,8 @@ function Notes() {
       setEditingNoteId(null);
       return;
     }
-
     try {
-      const res = await api.put(`/notes/${id}`, {
-        title: editingTitle,
-      });
+      const res = await api.put(`/notes/${id}`, { title: editingTitle });
       setNotes(notes.map((n) => (n._id === id ? res.data : n)));
       setEditingNoteId(null);
       setEditingTitle("");
@@ -98,20 +92,13 @@ function Notes() {
   // Update content
   const handleUpdateContent = async () => {
     if (!editContent.trim()) return;
-
     try {
-      const res = await api.put(`/notes/${openNote._id}`, {
-        content: editContent,
-      });
-
-      setNotes(
-        notes.map((note) =>
-          note._id === openNote._id ? res.data : note
-        )
-      );
-
+      const res = await api.put(`/notes/${openNote._id}`, { content: editContent });
+      setNotes(notes.map((n) => (n._id === openNote._id ? res.data : n)));
       setOpenNote(null);
       setEditContent("");
+      setShowFind(false);
+      setFindWord("");
       setUndoStackEdit([]);
       setRedoStackEdit([]);
     } catch (error) {
@@ -119,13 +106,7 @@ function Notes() {
     }
   };
 
-  // Logout
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  };
-
-  // --- Undo/Redo Handlers for Create Box ---
+  // Undo/Redo handlers for create
   const handleUndoCreate = () => {
     if (undoStackCreate.length === 0) return;
     const last = undoStackCreate[undoStackCreate.length - 1];
@@ -142,7 +123,7 @@ function Notes() {
     setRedoStackCreate(redoStackCreate.slice(1));
   };
 
-  // --- Undo/Redo Handlers for Edit Modal ---
+  // Undo/Redo handlers for edit modal
   const handleUndoEdit = () => {
     if (undoStackEdit.length === 0) return;
     const last = undoStackEdit[undoStackEdit.length - 1];
@@ -159,6 +140,13 @@ function Notes() {
     setRedoStackEdit(redoStackEdit.slice(1));
   };
 
+  // Function to highlight matches inside preview only
+  const getHighlightedContent = (text, word) => {
+    if (!word.trim()) return text;
+    const regex = new RegExp(`(${word})`, "gi");
+    return text.replace(regex, '<mark class="bg-yellow-300">$1</mark>');
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
@@ -166,7 +154,10 @@ function Notes() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">My Notes</h1>
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              localStorage.removeItem("token");
+              window.location.href = "/login";
+            }}
             className="text-red-600 hover:underline"
           >
             Logout
@@ -182,13 +173,12 @@ function Notes() {
           className="w-full mb-6 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
-        {/* + New Note Button */}
+        {/* New Note */}
         <button
           onClick={() => setShowCreateBox(!showCreateBox)}
           className="mb-6 flex items-center gap-2 text-blue-600 font-medium hover:underline"
         >
-          <span className="text-xl">+</span>
-          New Note
+          <span className="text-xl">+</span> New Note
         </button>
 
         {/* Create Note Box */}
@@ -199,7 +189,7 @@ function Notes() {
           >
             <h2 className="text-lg font-semibold mb-4">Create a Note</h2>
 
-            {/* Undo/Redo top-right */}
+            {/* Undo/Redo buttons */}
             <div className="absolute top-5 right-5 flex gap-2">
               <button
                 type="button"
@@ -225,17 +215,19 @@ function Notes() {
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full mb-3 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-
               <textarea
                 placeholder="Write your note here..."
                 value={content}
                 onChange={(e) => {
-                  setUndoStackCreate([...undoStackCreate, content]);
-                  setContent(e.target.value);
-                  setRedoStackCreate([]);
+                  const newValue = e.target.value;
+                  if (newValue !== content) {
+                    setUndoStackCreate([...undoStackCreate, content]);
+                    setContent(newValue);
+                    setRedoStackCreate([]);
+                  }
                 }}
-                rows="4"
-                className="w-full p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={6}
+                className="w-full p-2 border rounded resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -271,13 +263,14 @@ function Notes() {
                 setEditContent(note.content);
                 setUndoStackEdit([]);
                 setRedoStackEdit([]);
+                setShowFind(false);
+                setFindWord("");
               }}
               className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer hover:bg-gray-50"
             >
               <p className="text-xs text-gray-500 mb-1">
                 {new Date(note.createdAt).toLocaleString()}
               </p>
-
               {editingNoteId === note._id ? (
                 <input
                   value={editingTitle}
@@ -301,29 +294,19 @@ function Notes() {
                   >
                     {note.title || "Untitled"}
                   </h3>
-                  <p className="text-xs text-gray-400 mb-2">
-                    Click title to edit
-                  </p>
+                  <p className="text-xs text-gray-400 mb-2">Click title to edit</p>
                 </>
               )}
-
-              {note.summary && (
-                <p className="text-sm text-gray-700 mb-3">{note.summary}</p>
-              )}
-
+              {note.summary && <p className="text-sm text-gray-700 mb-3">{note.summary}</p>}
               {note.tags?.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {note.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="text-xs bg-gray-200 px-2 py-1 rounded"
-                    >
+                    <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -338,15 +321,13 @@ function Notes() {
         )}
       </div>
 
-      {/* Modal for editing note */}
+      {/* Edit Modal */}
       {openNote && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-lg rounded-lg p-6 shadow-lg relative">
-            <div className="flex justify-between mb-2">
+            <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-semibold">{openNote.title || "Untitled"}</h2>
-
-              {/* Undo/Redo for edit modal at top-right */}
-              <div className="flex gap-2 ml-auto mr-4">
+              <div className="flex gap-2 ml-auto">
                 <button
                   type="button"
                   onClick={handleUndoEdit}
@@ -362,7 +343,12 @@ function Notes() {
                   ↪️
                 </button>
               </div>
-
+              <button
+                onClick={() => setShowFind(!showFind)}
+                className="text-xl ml-2 hover:scale-110 transition-transform"
+              >
+                🔍
+              </button>
               <button onClick={() => setOpenNote(null)}>✕</button>
             </div>
 
@@ -370,22 +356,44 @@ function Notes() {
               {new Date(openNote.createdAt).toLocaleString()}
             </p>
 
+            {showFind && (
+              <input
+                type="text"
+                placeholder="Type word to find..."
+                value={findWord}
+                onChange={(e) => setFindWord(e.target.value)}
+                className="border px-2 py-1 rounded w-full mb-2"
+              />
+            )}
+
+            {/* Single flexible textarea for editing */}
             <textarea
               value={editContent}
               onChange={(e) => {
-                setUndoStackEdit([...undoStackEdit, editContent]);
-                setEditContent(e.target.value);
-                setRedoStackEdit([]);
+                const newValue = e.target.value;
+                if (newValue !== editContent) {
+                  setUndoStackEdit([...undoStackEdit, editContent]);
+                  setEditContent(newValue);
+                  setRedoStackEdit([]);
+                }
               }}
-              rows="6"
-              className="w-full p-3 border rounded resize-none"
+              rows={10}
+              className="w-full p-3 border rounded resize-y outline-none"
+              style={{ maxHeight: "60vh", minHeight: "150px", lineHeight: "1.5", fontFamily: "inherit" }}
             />
 
+            {/* Live preview with highlights */}
+            {findWord.trim() && (
+              <div
+                className="border rounded p-2 mt-2 max-h-[40vh] overflow-y-auto text-gray-800 whitespace-pre-wrap break-words"
+                dangerouslySetInnerHTML={{
+                  __html: getHighlightedContent(editContent, findWord),
+                }}
+              />
+            )}
+
             <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setOpenNote(null)}
-                className="px-4 py-2 border rounded"
-              >
+              <button onClick={() => setOpenNote(null)} className="px-4 py-2 border rounded">
                 Cancel
               </button>
               <button
