@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import {
-  Plus, Search, LogOut, Edit3, Trash2, X,
-  Calendar, Tag
+  Plus,
+  Search,
+  LogOut,
+  Trash2,
+  Tag,
 } from "lucide-react";
 
 function Notes() {
@@ -15,10 +18,9 @@ function Notes() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
 
+  const [showCreate, setShowCreate] = useState(false);
   const [openNote, setOpenNote] = useState(null);
   const [editContent, setEditContent] = useState("");
 
@@ -72,7 +74,7 @@ function Notes() {
     }
   };
 
-  /* ---------------- DELETE NOTE (SOFT) ---------------- */
+  /* ---------------- DELETE NOTE ---------------- */
   const handleDeleteNote = async (id) => {
     try {
       await api.put(`/notes/${id}`, { isDeleted: true });
@@ -112,7 +114,7 @@ function Notes() {
         <h1 className="text-4xl font-bold">My Notes</h1>
         <button
           onClick={handleLogout}
-          className="text-red-400 flex gap-2"
+          className="flex items-center gap-2 text-red-400"
         >
           <LogOut size={18} /> Logout
         </button>
@@ -132,7 +134,7 @@ function Notes() {
       {/* New Note */}
       <button
         onClick={() => setShowCreate(!showCreate)}
-        className="mb-6 bg-violet-600 px-6 py-3 rounded-xl"
+        className="mb-6 flex items-center gap-2 bg-violet-600 px-6 py-3 rounded-xl"
       >
         <Plus /> New Note
       </button>
@@ -179,7 +181,7 @@ function Notes() {
         </form>
       )}
 
-      {/* Notes */}
+      {/* Notes List */}
       {loading ? (
         <p>Loading...</p>
       ) : (
@@ -189,33 +191,43 @@ function Notes() {
               key={note._id}
               className="bg-white/10 p-5 rounded-xl"
             >
-              <div className="flex justify-between">
+              {/* Title + Delete */}
+              <div className="flex justify-between items-start mb-2">
                 <h3
                   onClick={() => {
                     setOpenNote(note);
                     setEditContent(note.content);
                   }}
-                  className="text-xl font-semibold cursor-pointer"
+                  className="text-xl font-semibold cursor-pointer hover:text-violet-300 transition"
                 >
                   {note.title || "Untitled"}
                 </h3>
 
                 <button
                   onClick={() => handleDeleteNote(note._id)}
-                  className="text-red-400"
+                  className="text-red-400 hover:text-red-500"
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
 
+              {/* SUMMARY */}
+              {note.summary && (
+                <p className="text-slate-300 text-sm mb-3 line-clamp-2">
+                  {note.summary}
+                </p>
+              )}
+
+              {/* TAGS */}
               {note.tags?.length > 0 && (
-                <div className="flex gap-2 mt-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap">
                   {note.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="text-xs bg-violet-500/20 px-3 py-1 rounded-full flex items-center gap-1"
+                      className="text-xs bg-violet-500/20 border border-violet-500/30 text-violet-300 px-3 py-1 rounded-full flex items-center gap-1"
                     >
-                      <Tag size={12} /> {tag}
+                      <Tag size={12} />
+                      {tag}
                     </span>
                   ))}
                 </div>
