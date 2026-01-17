@@ -52,7 +52,7 @@ export const getNotes = async (req, res) => {
       ];
     }
 
-    const notes = await Note.find(query).sort({ createdAt: -1 });
+    const notes = await Note.find(query).sort({isPinned: -1, createdAt: -1});
 
     res.json(notes);
   } catch (error) {
@@ -142,4 +142,5 @@ export const deleteNote = async (req, res) => {
     res.status(500).json({ message: "Failed to delete note" });
   }
 };
+
 

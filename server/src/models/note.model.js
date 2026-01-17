@@ -11,12 +11,18 @@ const noteSchema = new mongoose.Schema(
     content: String,
     summary: String,
     tags: [String],
+
+    isPinned: {
+        type: Boolean,
+        default: false
+    },
+
     isDeleted: {
         type: Boolean,
         default: false
     }
-}, { timestamps: true }
+}, 
+{ timestamps: true }
 );
-
 
 export default mongoose.model("Note", noteSchema);
