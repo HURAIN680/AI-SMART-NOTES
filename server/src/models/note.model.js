@@ -16,12 +16,19 @@ const noteSchema = new mongoose.Schema(
         type: Boolean,
         default: false
     },
-
+    isLocked: {
+        type: Boolean,
+        default: false
+    },
+    pinHash: {
+        type: String,
+        default: null
+    },
     isDeleted: {
         type: Boolean,
         default: false
     }
-}, 
+},
 { timestamps: true }
 );
 

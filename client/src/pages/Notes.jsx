@@ -29,8 +29,19 @@ function Notes() {
   const [showFind, setShowFind] = useState(false);
   const [findWord, setFindWord] = useState("");
 
+  // Options menu
+  const [showOptions, setShowOptions] = useState(false);
+
   //in order to fetch notes from backend(pin)
   const [originalOrder, setOriginalOrder] = useState([]);
+
+  
+  // Lock states
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinNote, setPinNote] = useState(null);
+  const [isSettingPin, setIsSettingPin] = useState(false);
+  const [pinError, setPinError] = useState("");
 
   // Fetch notes
   const fetchNotes = async (searchText = "") => {
@@ -49,6 +60,14 @@ function Notes() {
     const delay = setTimeout(() => fetchNotes(search), 300);
     return () => clearTimeout(delay);
   }, [search]);
+
+  useEffect(() => {
+  if (!openNote) {
+    setShowOptions(false);
+    setShowFind(false);
+  }
+}, [openNote]);
+
 
   // Create note
   const handleCreateNote = async (e) => {
@@ -170,8 +189,65 @@ function Notes() {
   }
 };
 
+// Toggle lock note
+const handleToggleLock = (note) => {
+  setPinNote(note);
+  setIsSettingPin(!note.isLocked);
+  setPinInput("");
+  setPinError("");
+  setShowPinModal(true);
+};
 
+// Submit PIN for setting or verifying
+const handleSubmitPin = async () => {
+  if (!pinInput.trim()) return;
 
+  try {
+    const endpoint = isSettingPin
+      ? `/notes/${pinNote._id}/lock`
+      : `/notes/${pinNote._id}/verify-pin`;
+
+    const res = await api.patch(endpoint, { pin: pinInput });
+
+    if (!isSettingPin) {
+      // verified → open note
+      setOpenNote(pinNote);
+      setEditContent(pinNote.content);
+    }
+
+    setNotes((prev) =>
+      prev.map((n) => (n._id === pinNote._id ? res.data : n))
+    );
+
+    setShowPinModal(false);
+    setPinInput("");
+  } catch (err) {
+    setPinError("Incorrect PIN");
+  }
+};
+
+// Unlock note permanently
+const handlePermanentUnlock = async () => {
+  if (!pinInput.trim()) return;
+
+  try {
+    const res = await api.patch(
+      `/notes/${openNote._id}/unlock`,
+      { pin: pinInput }
+    );
+
+    setNotes((prev) =>
+      prev.map((n) => (n._id === openNote._id ? res.data : n))
+    );
+
+    setOpenNote(res.data);
+    setPinInput("");
+    setPinError("");
+    setShowPinModal(false);
+  } catch (err) {
+    setPinError("Incorrect PIN");
+  }
+};
 
   // Function to highlight matches inside preview only
   const getHighlightedContent = (text, word) => {
@@ -292,12 +368,19 @@ function Notes() {
           <div
             key={note._id}
             onClick={() => {
-              setOpenNote(note);
-              setEditContent(note.content);
-              setUndoStackEdit([]);
-              setRedoStackEdit([]);
-              setShowFind(false);
-              setFindWord("");
+              if (note.isLocked) {
+                    setPinNote(note);
+                    setIsSettingPin(false);
+                    setShowPinModal(true);
+                    return;
+                  }
+
+                  setOpenNote(note);
+                  setEditContent(note.content);
+                  setUndoStackEdit([]);
+                  setRedoStackEdit([]);
+                  setShowFind(false);
+                  setFindWord("");
             }}
             className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer hover:bg-gray-50 relative"
           >
@@ -312,6 +395,19 @@ function Notes() {
             >
               {note.isPinned ? "📌" : "📍"}
             </button>
+    
+            {/* Lock button next to pin */}
+            <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleLock(note);
+                }}
+                className="absolute top-3 right-12 text-gray-400 hover:text-blue-600"
+                title={note.isLocked ? "Unlock Note" : "Lock Note"}
+              >
+                {note.isLocked ? "🔒" : "🔓"}
+            </button>
+
 
             <p className="text-xs text-gray-500 mb-1">
               {new Date(note.createdAt).toLocaleString()}
@@ -388,13 +484,44 @@ function Notes() {
                 ↪️
               </button>
             </div>
-            <button
-              onClick={() => setShowFind(!showFind)}
-              className="text-xl ml-2 hover:scale-110 transition-transform"
-            >
-              🔍
-            </button>
-            <button onClick={() => setOpenNote(null)}>✕</button>
+            <div className="relative ml-2">
+  <button
+    onClick={() => setShowOptions((prev) => !prev)}
+    className="text-xl px-2 hover:bg-gray-200 rounded"
+    title="More options"
+  >
+    ⋮
+  </button>
+
+  {showOptions && (
+    <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-md z-50">
+      <button
+        onClick={() => {
+          setShowFind(!showFind);
+          setShowOptions(false);
+        }}
+        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+      >
+        🔍 Find in note
+      </button>
+
+      {openNote.isLocked && (
+        <button
+          onClick={() => {
+            setPinInput("");
+            setPinError("");
+            setShowPinModal(true);
+            setShowOptions(false);
+          }}
+          className="w-full text-left px-4 py-2 hover:bg-gray-100"
+        >
+          🔓 Unlock forever
+        </button>
+      )}
+    </div>
+  )}
+</div>
+
           </div>
 
           <p className="text-xs text-gray-500 mb-3">
@@ -451,6 +578,62 @@ function Notes() {
         </div>
       </div>
     )}
+    {showPinModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg w-80">
+      <h3 className="text-lg font-semibold mb-3">
+        {isSettingPin ? "Set PIN" : "Enter PIN"}
+      </h3>
+
+      <input
+        type="password"
+        value={pinInput}
+        onChange={(e) => setPinInput(e.target.value)}
+        className="w-full border p-2 rounded mb-2"
+        placeholder="Enter PIN"
+      />
+
+      {pinError && <p className="text-red-500 text-sm">{pinError}</p>}
+
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => setShowPinModal(false)}
+          className="px-4 py-2 border rounded"
+        >
+          Cancel
+        </button>
+        {isSettingPin ? (
+  <button
+    onClick={handleSubmitPin}
+    className="px-4 py-2 bg-blue-600 text-white rounded"
+  >
+    Set PIN
+  </button>
+) : (
+  <>
+    <button
+      onClick={handleSubmitPin}
+      className="px-4 py-2 bg-blue-600 text-white rounded"
+    >
+      Open
+    </button>
+
+    {openNote && openNote.isLocked && (
+      <button
+        onClick={handlePermanentUnlock}
+        className="px-4 py-2 bg-green-600 text-white rounded"
+      >
+        Unlock Forever
+      </button>
+    )}
+  </>
+)}
+
+      </div>
+    </div>
+  </div>
+)}
+
   </div>
 );
 };

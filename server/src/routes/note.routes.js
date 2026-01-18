@@ -1,4 +1,5 @@
 import express from "express";
+import bcrypt from "bcryptjs";
 
 import  protect  from "../middleware/auth.middleware.js";
 import {
@@ -32,6 +33,101 @@ router.patch("/:id/pin", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+router.patch("/:id/lock", async (req, res) => {
+  try {
+    const { pin } = req.body;
+
+    if (!pin) {
+      return res.status(400).json({ message: "PIN is required" });
+    }
+
+    const note = await Note.findOne({
+      _id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!note) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    // LOCK
+    if (!note.isLocked) {
+      const hashedPin = await bcrypt.hash(pin, 10);
+      note.isLocked = true;
+      note.pinHash = hashedPin;
+    }
+    // UNLOCK
+    else {
+      const isMatch = await bcrypt.compare(pin, note.pinHash);
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid PIN" });
+      }
+
+      note.isLocked = false;
+      note.pinHash = null;
+    }
+
+    await note.save();
+    res.json(note);
+  } catch (error) {
+    console.error("Lock Note Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/:id/verify-pin", async (req, res) => {
+  try {
+    const { pin } = req.body;
+    const note = await Note.findById(req.params.id);
+
+    if (!note || !note.isLocked) {
+      return res.status(400).json({ message: "Note not locked" });
+    }
+
+    const isMatch = await bcrypt.compare(pin, note.pinHash);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect PIN" });
+    }
+
+    res.json(note);
+  } catch (err) {
+    console.error("Verify PIN Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Toggle lock note(unlock permanently)
+router.patch("/:id/unlock", async (req, res) => {
+  try {
+    const { pin } = req.body;
+    const note = await Note.findById(req.params.id);
+
+    if (!note || !note.isLocked) {
+      return res.status(400).json({ message: "Note is not locked" });
+    }
+
+    const isMatch = await bcrypt.compare(pin, note.pinHash);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect PIN" });
+    }
+
+    // 🔓 Permanently unlock
+    note.isLocked = false;
+    note.pinHash = null;
+
+    await note.save();
+
+    res.json(note);
+  } catch (err) {
+    console.error("Unlock Note Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
+
 router.get("/:id", getNoteById);
 router.put("/:id", updateNote);
 router.delete("/:id", deleteNote);
