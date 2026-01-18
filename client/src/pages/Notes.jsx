@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, } from "react";
 import api from "../api/axios";
 
 function Notes() {
@@ -39,7 +39,7 @@ function Notes() {
       setOriginalOrder(res.data.map((note) => note._id)); // store original order
       setNotes(res.data.sort((a, b) => (b.isPinned === true) - (a.isPinned === true)));
     } catch (error) {
-      console.error("Failed to fetch notes");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ function Notes() {
       setRedoStackCreate([]);
       setShowCreateBox(false);
     } catch (error) {
-      console.error("Failed to create note");
+      console.error(error);
     }
   };
 
@@ -73,7 +73,7 @@ function Notes() {
       await api.delete(`/notes/${id}`);
       setNotes(notes.filter((note) => note._id !== id));
     } catch (error) {
-      console.error("Failed to delete note");
+      console.error(error);
     }
   };
 
@@ -89,7 +89,7 @@ function Notes() {
       setEditingNoteId(null);
       setEditingTitle("");
     } catch (error) {
-      console.error("Failed to update title");
+      console.error(error);
     }
   };
 
@@ -106,7 +106,7 @@ function Notes() {
       setUndoStackEdit([]);
       setRedoStackEdit([]);
     } catch (error) {
-      console.error("Failed to update content");
+      console.error(error);
     }
   };
 
