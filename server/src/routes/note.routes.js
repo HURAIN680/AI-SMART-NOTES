@@ -17,6 +17,29 @@ import { uploadFileToNote } from "../controllers/note.controller.js";
 
 const router = express.Router();
 
+// PUBLIC – no protect middleware
+router.get("/share/:id", async (req, res) => {
+  try {
+    const note = await Note.findById(req.params.id).select(
+      "title content summary tags createdAt isLocked"
+    );
+
+    if (!note) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+
+    // Do NOT allow locked notes to be shared
+    if (note.isLocked) {
+      return res.status(403).json({ message: "This note is locked" });
+    }
+
+    res.json(note);
+  } catch (error) {
+    console.error("Share Note Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.use(protect);
 
 router.post("/", createNote);
