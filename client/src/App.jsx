@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Notes from "./pages/Notes";
 import Home from "./pages/Home";
+import SharedNote from "./pages/SharedNote";
 
  const isAuthenticated = () => {
    return !!localStorage.getItem("token");
@@ -21,6 +22,7 @@ function App() {
           path="/notes"
           element={isAuthenticated() ? <Notes /> : <Navigate to="/login" />}
         /> }
+        <Route path="/share/:id" element={<SharedNote />} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

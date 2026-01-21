@@ -248,6 +248,12 @@ const handlePermanentUnlock = async () => {
     setPinError("Incorrect PIN");
   }
 };
+// Share note
+const shareNote = (noteId) => {
+  const link = `${window.location.origin}/share/${noteId}`;
+  navigator.clipboard.writeText(link);
+  alert(`Share link copied: ${link}`);
+};
 
   // Function to highlight matches inside preview only
   const getHighlightedContent = (text, word) => {
@@ -508,7 +514,17 @@ const handlePermanentUnlock = async () => {
       >
         🔍 Find in note
       </button>
-     
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // prevent opening modal
+          shareNote(openNote._id); // ✅ use the currently opened note's ID
+          setShowOptions(false); // optionally close the dropdown
+        }}
+       className="w-full text-left px-4 py-2 hover:bg-gray-100"
+    >
+        🔗 Share
+      </button>
+
       {openNote.isLocked && (
         <button
           onClick={() => {
