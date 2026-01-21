@@ -10,6 +10,8 @@ import {
   deleteNote
 } from "../controllers/note.controller.js";
 import Note from "../models/note.model.js";
+import upload from "../middleware/upload.js";
+import { uploadFileToNote } from "../controllers/note.controller.js";
 
 
 
@@ -131,6 +133,13 @@ router.patch("/:id/unlock", async (req, res) => {
 router.get("/:id", getNoteById);
 router.put("/:id", updateNote);
 router.delete("/:id", deleteNote);
+router.post(
+  "/:id/upload",
+  protect,
+  upload.single("file"),
+  uploadFileToNote
+);
+
 
 
 

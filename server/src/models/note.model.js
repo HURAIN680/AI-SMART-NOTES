@@ -12,6 +12,18 @@ const noteSchema = new mongoose.Schema(
     summary: String,
     tags: [String],
 
+    files: [
+      {
+        url: String,
+        publicId: String,
+        originalName: String,
+        // vital: If naming a field "type", use this syntax to avoid Mongoose errors
+        type: { 
+            type: String 
+        }, 
+      },
+    ],
+
     isPinned: {
         type: Boolean,
         default: false
@@ -31,5 +43,15 @@ const noteSchema = new mongoose.Schema(
 },
 { timestamps: true }
 );
+
+files: [
+  {
+    url: String,
+    publicId: String,
+    originalName: String,
+    type: String
+  }
+]
+
 
 export default mongoose.model("Note", noteSchema);

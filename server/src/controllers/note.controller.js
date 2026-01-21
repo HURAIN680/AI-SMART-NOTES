@@ -5,6 +5,8 @@ import {
   generateTitle,
   generateTags
 } from "../services/ai.service.js";
+import cloudinary from "../config/cloudinary.js";
+
 
 
 export const createNote = async (req, res) => {
@@ -142,5 +144,40 @@ export const deleteNote = async (req, res) => {
     res.status(500).json({ message: "Failed to delete note" });
   }
 };
+
+
+
+export const uploadFileToNote = async (req, res) => {
+  try {
+    const note = await Note.findOne({
+      _id: req.params.id,
+      userId: req.user.id
+    });
+
+    if (!note) return res.status(404).json({ message: "Note not found" });
+
+    const result = await cloudinary.uploader.upload_stream(
+      { resource_type: "auto" },
+      async (error, result) => {
+        if (error) throw error;
+
+        note.files.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+          originalName: req.file.originalname,
+          type: req.file.mimetype
+        });
+
+        await note.save();
+        res.json(note);
+      }
+    );
+
+    result.end(req.file.buffer);
+  } catch (err) {
+    res.status(500).json({ message: "File upload failed" });
+  }
+};
+
 
 
