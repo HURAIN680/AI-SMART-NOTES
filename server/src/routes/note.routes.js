@@ -15,6 +15,7 @@ import Note from "../models/note.model.js";
 
 const router = express.Router();
 
+
 router.use(protect);
 
 router.post("/", createNote);

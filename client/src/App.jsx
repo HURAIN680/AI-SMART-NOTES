@@ -4,8 +4,6 @@ import Register from "./pages/Register";
 import Notes from "./pages/Notes";
 import Home from "./pages/Home";
 
-
-
  const isAuthenticated = () => {
    return !!localStorage.getItem("token");
  };
@@ -18,6 +16,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/notes" element={<Notes />} />
+
         { <Route
           path="/notes"
           element={isAuthenticated() ? <Notes /> : <Navigate to="/login" />}

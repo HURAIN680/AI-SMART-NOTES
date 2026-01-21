@@ -249,7 +249,6 @@ const handlePermanentUnlock = async () => {
   }
 };
 
-
   // Function to highlight matches inside preview only
   const getHighlightedContent = (text, word) => {
     if (!word.trim()) return text;
@@ -509,7 +508,7 @@ const handlePermanentUnlock = async () => {
       >
         🔍 Find in note
       </button>
-   
+     
       {openNote.isLocked && (
         <button
           onClick={() => {
