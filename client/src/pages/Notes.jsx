@@ -249,6 +249,13 @@ const handlePermanentUnlock = async () => {
   }
 };
 
+// Share note link
+const handleShareNote = (noteId) => {
+  const shareUrl = `${window.location.origin}/note/${noteId}`;
+  navigator.clipboard.writeText(shareUrl);
+  alert("Share link copied");
+};
+
   // Function to highlight matches inside preview only
   const getHighlightedContent = (text, word) => {
     if (!word.trim()) return text;
@@ -508,6 +515,12 @@ const handlePermanentUnlock = async () => {
       >
         🔍 Find in note
       </button>
+      <button
+  onClick={() => handleShareNote(openNote._id)}
+  className="w-full text-left px-4 py-2 hover:bg-gray-100"
+>
+  📤 Share note
+</button>
 
       {openNote.isLocked && (
         <button
