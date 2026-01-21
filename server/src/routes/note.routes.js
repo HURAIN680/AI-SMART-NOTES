@@ -15,22 +15,6 @@ import Note from "../models/note.model.js";
 
 const router = express.Router();
 
-// GET /notes/share/:id
-router.get("/share/:id", async (req, res) => {
-  try {
-    const noteId = req.params.id;
-
-    const note = await Note.findById(noteId).select("title content summary tags createdAt");
-    if (!note) return res.status(404).json({ message: "Note not found" });
-
-    res.json(note); // send minimal info only
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
 router.use(protect);
 
 router.post("/", createNote);
