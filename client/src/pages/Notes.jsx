@@ -280,7 +280,12 @@ function Notes() {
               localStorage.removeItem("token");
               window.location.href = "/login";
             }}
+<<<<<<< HEAD
             className="text-red-600 hover:underline"
+=======
+           className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer relative hover:bg-gray-50"
+
+>>>>>>> ee699d6aff415d817138d04677f5e23fad2e94d8
           >
             Logout
           </button>
@@ -396,6 +401,81 @@ function Notes() {
                 className="absolute top-3 right-12 text-gray-400 hover:text-blue-600"
               >
                 {note.isLocked ? "🔒" : "🔓"}
+<<<<<<< HEAD
+=======
+            </button>
+
+          
+            <p className="text-xs text-gray-500 mb-1">
+              {new Date(note.createdAt).toLocaleString()}
+            </p>
+            {editingNoteId === note._id ? (
+              <input
+                value={editingTitle}
+                autoFocus
+                onChange={(e) => setEditingTitle(e.target.value)}
+                onBlur={() => handleUpdateTitle(note._id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleUpdateTitle(note._id);
+                }}
+                className="w-full text-lg font-semibold p-1 border rounded"
+              />
+            ) : (
+              <>
+                <h3
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingNoteId(note._id);
+                    setEditingTitle(note.title || "");
+                  }}
+                  className="text-lg font-semibold hover:text-blue-600"
+                >
+                  {note.title || "Untitled"}
+                </h3>
+                <p className="text-xs text-gray-400 mb-2">Click title to edit</p>
+              </>
+            )}
+            <div className={note.isLocked ? "blur-sm select-none" : ""}>
+            {note.summary && <p className="text-sm text-gray-700 mb-3">{note.summary}</p>}
+            {note.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {note.tags.map((tag, i) => (
+                  <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteNote(note._id);
+              }}
+              className="text-sm text-red-600 hover:underline"
+            >
+              Delete
+            </button>
+            </div>
+          
+        ))
+      )}
+    </div>
+
+    {/* Edit Modal */}
+    {openNote && (
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="bg-white w-full max-w-lg rounded-lg p-6 shadow-lg relative">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold">{openNote.title || "Untitled"}</h2>
+            <div className="flex gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={handleUndoEdit}
+                className="px-3 py-1 hover:bg-gray-200 rounded"
+              >
+                ↩️
+>>>>>>> ee699d6aff415d817138d04677f5e23fad2e94d8
               </button>
 
               <p className="text-xs text-gray-500 mb-1">
