@@ -382,7 +382,8 @@ const handlePermanentUnlock = async () => {
                   setShowFind(false);
                   setFindWord("");
             }}
-            className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer hover:bg-gray-50 relative"
+           className="bg-white p-5 rounded-lg shadow mb-4 cursor-pointer relative hover:bg-gray-50"
+
           >
             {/* Pin button at top-right */}
             <button
@@ -408,7 +409,7 @@ const handlePermanentUnlock = async () => {
                 {note.isLocked ? "🔒" : "🔓"}
             </button>
 
-
+          
             <p className="text-xs text-gray-500 mb-1">
               {new Date(note.createdAt).toLocaleString()}
             </p>
@@ -438,6 +439,7 @@ const handlePermanentUnlock = async () => {
                 <p className="text-xs text-gray-400 mb-2">Click title to edit</p>
               </>
             )}
+            <div className={note.isLocked ? "blur-sm select-none" : ""}>
             {note.summary && <p className="text-sm text-gray-700 mb-3">{note.summary}</p>}
             {note.tags?.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
@@ -448,6 +450,7 @@ const handlePermanentUnlock = async () => {
                 ))}
               </div>
             )}
+            </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -457,7 +460,8 @@ const handlePermanentUnlock = async () => {
             >
               Delete
             </button>
-          </div>
+            </div>
+          
         ))
       )}
     </div>
