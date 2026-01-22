@@ -82,3 +82,5 @@ ai-smart-notes/
 │   └── server.js
 │
 └── README.md
+
+Data Security: Notes are stored in MongoDB Atlas, which provides built-in encryption at rest and secure connections via TLS.
