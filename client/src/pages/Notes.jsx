@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, Undo2, Redo2, Share2, Loader2, StickyNote } from "lucide-react";
 import api from "../api/axios";
 
 function Notes() {
@@ -246,31 +247,35 @@ function Notes() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              My Notes
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Capture your thoughts</p>
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-lg">
+              <StickyNote className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                My Notes
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">Capture your thoughts</p>
+            </div>
           </div>
           <button
             onClick={() => {
               localStorage.removeItem("token");
               window.location.href = "/login";
             }}
-            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-200 shadow-sm"
+            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-200 shadow-sm flex items-center gap-2"
           >
+            <LogOut className="w-4 h-4" />
             Logout
           </button>
         </div>
 
         {/* Search */}
         <div className="relative mb-8">
-          <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search notes by title or content..."
@@ -285,33 +290,31 @@ function Notes() {
           onClick={() => setShowCreateBox(!showCreateBox)}
           className="mb-8 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
         >
-          <span className="text-xl">+</span> New Note
+          <Plus className="w-5 h-5" />
+          New Note
         </button>
 
         {/* Create Note Box */}
         {showCreateBox && (
-          <form
-            onSubmit={handleCreateNote}
-            className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-gray-100"
-          >
+          <div className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-gray-100">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-white">Create a Note</h2>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleUndoCreate}
-                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
+                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
                   title="Undo"
                 >
-                  ↩️
+                  <Undo2 className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={handleRedoCreate}
-                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
+                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
                   title="Redo"
                 >
-                  ↪️
+                  <Redo2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -341,13 +344,12 @@ function Notes() {
 
               <div className="flex gap-3 mt-6">
                 <button
-                  type="submit"
+                  onClick={handleCreateNote}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium"
                 >
                   Save Note
                 </button>
                 <button
-                  type="button"
                   onClick={() => setShowCreateBox(false)}
                   className="px-6 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all font-medium"
                 >
@@ -355,25 +357,25 @@ function Notes() {
                 </button>
               </div>
             </div>
-          </form>
+          </div>
         )}
 
         {/* Notes List */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+            <Loader2 className="inline-block animate-spin w-12 h-12 text-blue-600" />
             <p className="text-gray-500 mt-4">Loading notes...</p>
           </div>
         ) : notes.length === 0 ? (
           <div className="text-center py-16">
-            <svg className="mx-auto w-24 h-24 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p className="text-gray-500 text-lg">No notes yet</p>
+            <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center mb-4">
+              <StickyNote className="w-12 h-12 text-blue-600" />
+            </div>
+            <p className="text-gray-500 text-lg font-medium">No notes yet</p>
             <p className="text-gray-400 text-sm mt-1">Create your first note to get started</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {notes.map((note) => (
               <div
                 key={note._id}
@@ -405,7 +407,7 @@ function Notes() {
                         e.stopPropagation();
                         handleTogglePin(note._id);
                       }}
-                      className="p-2 bg-white rounded-lg shadow-md hover:bg-yellow-50 transition-all"
+                      className="p-2 bg-white rounded-lg shadow-md hover:bg-yellow-50 transition-all text-lg"
                       title={note.isPinned ? "Unpin Note" : "Pin Note"}
                     >
                       {note.isPinned ? "📌" : "📍"}
@@ -415,14 +417,15 @@ function Notes() {
                         e.stopPropagation();
                         handleToggleLock(note);
                       }}
-                      className="p-2 bg-white rounded-lg shadow-md hover:bg-blue-50 transition-all"
+                      className="p-2 bg-white rounded-lg shadow-md hover:bg-blue-50 transition-all text-lg"
                       title={note.isLocked ? "Unlock Note" : "Lock Note"}
                     >
                       {note.isLocked ? "🔒" : "🔓"}
                     </button>
                   </div>
 
-                  <p className="text-xs text-gray-400 mb-3">
+                  <p className="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                    <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
                     {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
 
@@ -438,18 +441,16 @@ function Notes() {
                       className="w-full text-lg font-semibold p-2 border border-blue-500 rounded-lg mb-2"
                     />
                   ) : (
-                    <>
-                      <h3
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingNoteId(note._id);
-                          setEditingTitle(note.title || "");
-                        }}
-                        className="text-lg font-bold text-gray-800 mb-1 hover:text-blue-600 transition-colors line-clamp-2"
-                      >
-                        {note.title || "Untitled"}
-                      </h3>
-                    </>
+                    <h3
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingNoteId(note._id);
+                        setEditingTitle(note.title || "");
+                      }}
+                      className="text-lg font-bold text-gray-800 mb-2 hover:text-blue-600 transition-colors line-clamp-2"
+                    >
+                      {note.title || "Untitled"}
+                    </h3>
                   )}
 
                   <div className={note.isLocked ? "blur-sm select-none" : ""}>
@@ -479,7 +480,7 @@ function Notes() {
                       e.stopPropagation();
                       handleDeleteNote(note._id);
                     }}
-                    className="text-sm text-red-500 hover:text-red-700 hover:underline transition-colors mt-2"
+                    className="text-sm text-red-500 hover:text-red-700 hover:underline transition-colors mt-2 flex items-center gap-1"
                   >
                     Delete
                   </button>
@@ -492,36 +493,37 @@ function Notes() {
 
       {/* Edit Modal */}
       {openNote && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white w-full h-full overflow-hidden flex flex-col">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white truncate pr-4">
+              <h2 className="text-xl font-bold text-white truncate pr-4 flex items-center gap-2">
+                <StickyNote className="w-5 h-5" />
                 {openNote.title || "Untitled"}
               </h2>
               <div className="flex gap-2 items-center flex-shrink-0">
                 <button
                   type="button"
                   onClick={handleUndoEdit}
-                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
+                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
                   title="Undo"
                 >
-                  ↩️
+                  <Undo2 className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={handleRedoEdit}
-                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
+                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
                   title="Redo"
                 >
-                  ↪️
+                  <Redo2 className="w-4 h-4" />
                 </button>
                 <div className="relative">
                   <button
                     onClick={() => setShowOptions((prev) => !prev)}
-                    className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
+                    className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
                     title="More options"
                   >
-                    ⋮
+                    <MoreVertical className="w-4 h-4" />
                   </button>
                   {showOptions && (
                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
@@ -530,9 +532,10 @@ function Notes() {
                           setShowFind(!showFind);
                           setShowOptions(false);
                         }}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3"
                       >
-                        <span>🔍</span> Find in note
+                        <Search className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm">Find in note</span>
                       </button>
                       <button
                         onClick={(e) => {
@@ -540,9 +543,10 @@ function Notes() {
                           shareNote(openNote._id);
                           setShowOptions(false);
                         }}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3"
                       >
-                        <span>🔗</span> Share
+                        <Share2 className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm">Share</span>
                       </button>
                       {openNote.isLocked && (
                         <button
@@ -552,9 +556,10 @@ function Notes() {
                             setShowPinModal(true);
                             setShowOptions(false);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-2"
+                          className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3"
                         >
-                          <span>🔓</span> Unlock forever
+                          <Unlock className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm">Unlock forever</span>
                         </button>
                       )}
                     </div>
@@ -563,19 +568,23 @@ function Notes() {
               </div>
             </div>
 
-            <div className="p-6">
-              <p className="text-xs text-gray-400 mb-4">
+            <div className="p-6 flex-1 overflow-y-auto">
+              <p className="text-xs text-gray-400 mb-4 flex items-center gap-1">
+                <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
                 {new Date(openNote.createdAt).toLocaleString()}
               </p>
 
               {showFind && (
-                <input
-                  type="text"
-                  placeholder="Type word to find..."
-                  value={findWord}
-                  onChange={(e) => setFindWord(e.target.value)}
-                  className="border border-gray-300 px-4 py-2 rounded-xl w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Type word to find..."
+                    value={findWord}
+                    onChange={(e) => setFindWord(e.target.value)}
+                    className="border border-gray-300 pl-10 pr-4 py-2 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               )}
 
               <textarea
@@ -588,9 +597,8 @@ function Notes() {
                     setRedoStackEdit([]);
                   }
                 }}
-                rows={10}
-                className="w-full p-4 border border-gray-300 rounded-xl resize-y outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                style={{ maxHeight: "60vh", minHeight: "200px", lineHeight: "1.6" }}
+                className="w-full p-4 border border-gray-300 rounded-xl resize-none outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh]"
+                style={{ lineHeight: "1.6" }}
               />
 
               {findWord.trim() && (
@@ -601,8 +609,10 @@ function Notes() {
                   }}
                 />
               )}
+            </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+            <div className="p-6 pt-0 border-t border-gray-100">
+              <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setOpenNote(null)}
                   className="px-6 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all font-medium"
@@ -625,9 +635,14 @@ function Notes() {
       {showPinModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
-            <h3 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              {isSettingPin ? "Set PIN" : "Enter PIN"}
-            </h3>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl">
+                {isSettingPin ? <Lock className="w-6 h-6 text-white" /> : <Unlock className="w-6 h-6 text-white" />}
+              </div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                {isSettingPin ? "Set PIN" : "Enter PIN"}
+              </h3>
+            </div>
 
             <input
               type="password"
@@ -637,7 +652,11 @@ function Notes() {
               placeholder="Enter PIN"
             />
 
-            {pinError && <p className="text-red-500 text-sm mb-4">{pinError}</p>}
+            {pinError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2 rounded-lg mb-4">
+                {pinError}
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 mt-6">
               <button
@@ -649,8 +668,9 @@ function Notes() {
               {isSettingPin ? (
                 <button
                   onClick={handleSubmitPin}
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium flex items-center gap-2"
                 >
+                  <Lock className="w-4 h-4" />
                   Set PIN
                 </button>
               ) : (
@@ -664,8 +684,9 @@ function Notes() {
                   {openNote && openNote.isLocked && (
                     <button
                       onClick={handlePermanentUnlock}
-                      className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md font-medium"
+                      className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md font-medium flex items-center gap-2"
                     >
+                      <Unlock className="w-4 h-4" />
                       Unlock Forever
                     </button>
                   )}
