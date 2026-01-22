@@ -5,8 +5,6 @@ import {
   generateTitle,
   generateTags
 } from "../services/ai.service.js";
-import cloudinary from "../config/cloudinary.js";
-
 
 
 export const createNote = async (req, res) => {
