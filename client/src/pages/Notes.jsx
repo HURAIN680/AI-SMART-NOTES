@@ -295,8 +295,10 @@ function Notes() {
         </button>
 
         {/* Create Note Box */}
-        {showCreateBox && (
-          <div className="bg-white rounded-2xl shadow-lg mb-8 overflow-hidden border border-gray-100">
+        {/* Create Note Box */}
+{showCreateBox && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white w-full h-full overflow-hidden flex flex-col">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-white">Create a Note</h2>
               <div className="flex gap-2">
@@ -319,7 +321,7 @@ function Notes() {
               </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 flex flex-col flex-1">
               <input
                 type="text"
                 placeholder="Title (optional)"
@@ -338,8 +340,8 @@ function Notes() {
                     setRedoStackCreate([]);
                   }
                 }}
-                rows={6}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                
+                className="w-full flex-1 px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
 
               <div className="flex gap-3 mt-6">
@@ -358,6 +360,7 @@ function Notes() {
               </div>
             </div>
           </div>
+  </div>
         )}
 
         {/* Notes List */}
