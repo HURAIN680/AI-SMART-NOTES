@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, Undo2, Redo2, Share2, Loader2, StickyNote } from "lucide-react";
 import api from "../api/axios";
 
+
 function Notes() {
   const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState("");
