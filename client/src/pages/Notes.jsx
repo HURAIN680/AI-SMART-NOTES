@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, Undo2, Redo2, Share2, Loader2, StickyNote } from "lucide-react";
 import api from "../api/axios";
+import DOMPurify from "dompurify";
+
 
 function Notes() {
   const [notes, setNotes] = useState([]);
@@ -147,37 +149,74 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
 
   // Undo/Redo handlers for create
   const handleUndoCreate = () => {
-    if (undoStackCreate.length === 0) return;
-    const last = undoStackCreate[undoStackCreate.length - 1];
-    setRedoStackCreate([content, ...redoStackCreate]);
-    setContent(last);
-    setUndoStackCreate(undoStackCreate.slice(0, -1));
-  };
+  if (undoStackCreate.length === 0) return;
+
+  const last = undoStackCreate[undoStackCreate.length - 1];
+
+  setRedoStackCreate((prev) => [content, ...prev]);
+  setUndoStackCreate((prev) => prev.slice(0, -1));
+  setContent(last);
+
+  // 🔥 update editor DOM
+  if (createEditorRef.current) {
+    createEditorRef.current.innerHTML = last;
+placeCaretAtEnd(createEditorRef.current);
+
+  }
+};
+
 
   const handleRedoCreate = () => {
-    if (redoStackCreate.length === 0) return;
-    const next = redoStackCreate[0];
-    setUndoStackCreate([...undoStackCreate, content]);
-    setContent(next);
-    setRedoStackCreate(redoStackCreate.slice(1));
-  };
+  if (redoStackCreate.length === 0) return;
+
+  const next = redoStackCreate[0];
+
+  setUndoStackCreate((prev) => [...prev, content]);
+  setRedoStackCreate((prev) => prev.slice(1));
+  setContent(next);
+
+  if (createEditorRef.current) {
+    createEditorRef.current.innerHTML = next;
+placeCaretAtEnd(createEditorRef.current);
+
+  }
+};
+
 
   // Undo/Redo handlers for edit modal
   const handleUndoEdit = () => {
-    if (undoStackEdit.length === 0) return;
-    const last = undoStackEdit[undoStackEdit.length - 1];
-    setRedoStackEdit([editContent, ...redoStackEdit]);
-    setEditContent(last);
-    setUndoStackEdit(undoStackEdit.slice(0, -1));
-  };
+  if (undoStackEdit.length === 0) return;
+
+  const last = undoStackEdit[undoStackEdit.length - 1];
+
+  setRedoStackEdit((prev) => [editContent, ...prev]);
+  setUndoStackEdit((prev) => prev.slice(0, -1));
+  setEditContent(last);
+
+  if (editEditorRef.current) {
+    editEditorRef.current.innerHTML = last;
+placeCaretAtEnd(editEditorRef.current);
+
+  }
+};
+
 
   const handleRedoEdit = () => {
-    if (redoStackEdit.length === 0) return;
-    const next = redoStackEdit[0];
-    setUndoStackEdit([...undoStackEdit, editContent]);
-    setEditContent(next);
-    setRedoStackEdit(redoStackEdit.slice(1));
-  };
+  if (redoStackEdit.length === 0) return;
+
+  const next = redoStackEdit[0];
+
+  setUndoStackEdit((prev) => [...prev, editContent]);
+  setRedoStackEdit((prev) => prev.slice(1));
+  setEditContent(next);
+
+  if (editEditorRef.current) {
+    editEditorRef.current.innerHTML = next;
+placeCaretAtEnd(editEditorRef.current);
+
+  }
+};
+
 
   // Toggle pin note
   const handleTogglePin = async (id) => {
@@ -278,11 +317,18 @@ function placeCaretAtEnd(el) {
 
 
   // Function to highlight matches inside preview only
-  const getHighlightedContent = (text, word) => {
-    if (!word.trim()) return text;
-    const regex = new RegExp(`(${word})`, "gi");
-    return text.replace(regex, '<mark class="bg-yellow-300">$1</mark>');
-  };
+  const getHighlightedContent = (html, word) => {
+  if (!word.trim()) return DOMPurify.sanitize(html);
+
+  const cleanHtml = DOMPurify.sanitize(html);
+
+  const regex = new RegExp(`(${word})`, "gi");
+  return cleanHtml.replace(
+    regex,
+    '<mark class="bg-yellow-300">$1</mark>'
+  );
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
