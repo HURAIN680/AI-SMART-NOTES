@@ -12,7 +12,7 @@ function SharedNote() {
 
   useEffect(() => {
     axios
-      .get(`https://ai-smart-notes-backend-mvw5.onrender.com/api/notes/share/${id}`)
+      .get(`https://ai-smart-notes.onrender.com/api/notes/share/${id}`)
       .then((res) => setNote(res.data))
       .catch((err) => {
         setError(err.response?.data?.message || "Failed to load note");
