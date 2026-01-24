@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import { 
-  Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, 
-  Undo2, Redo2, Share2, Loader2, StickyNote, X, 
+import {
+  Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical,
+  Undo2, Redo2, Share2, Loader2, StickyNote, X,
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette
 } from "lucide-react";
 import api from "../api/axios";
 import DOMPurify from "dompurify";
+import Logo from "../assets/logo.jpg";
 
 function Notes() {
   const [notes, setNotes] = useState([]);
@@ -13,7 +14,7 @@ function Notes() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  
+
   // Toolbar toggles
   const [showCreateToolbar, setShowCreateToolbar] = useState(true); // Default to true for better UX
   const [showEditToolbar, setShowEditToolbar] = useState(true);
@@ -96,7 +97,7 @@ function Notes() {
       setNotes([res.data, ...notes]);
       setTitle("");
       setContent("");
-      if(createEditorRef.current) createEditorRef.current.innerHTML = "";
+      if (createEditorRef.current) createEditorRef.current.innerHTML = "";
       setUndoStackCreate([]);
       setRedoStackCreate([]);
       setShowCreateBox(false);
@@ -106,7 +107,7 @@ function Notes() {
   };
 
   const handleDeleteNote = async (id) => {
-    if(!window.confirm("Are you sure you want to delete this note?")) return;
+    if (!window.confirm("Are you sure you want to delete this note?")) return;
     try {
       await api.delete(`/notes/${id}`);
       setNotes(notes.filter((note) => note._id !== id));
@@ -237,13 +238,13 @@ function Notes() {
         ? `/notes/${pinNote._id}/lock`
         : `/notes/${pinNote._id}/verify-pin`;
       const res = await api.patch(endpoint, { pin: pinInput });
-      
+
       if (!isSettingPin) {
         // Correct pin entered, open note
         setOpenNote(pinNote);
         setEditContent(pinNote.content);
       }
-      
+
       // Update local state
       setNotes((prev) =>
         prev.map((n) => (n._id === pinNote._id ? res.data : n))
@@ -292,24 +293,24 @@ function Notes() {
   };
 
   // --- COMPONENTS ---
-  
+
   // Reusable Toolbar Component to keep things clean
   const EditorToolbar = ({ type }) => (
     <div className="flex flex-wrap items-center gap-1 mb-3 p-2 bg-gray-50 border border-gray-200 rounded-xl">
       <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-1">
-        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("bold", null, type)} title="Bold"><Bold size={16}/></button>
-        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("italic", null, type)} title="Italic"><Italic size={16}/></button>
-        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("underline", null, type)} title="Underline"><Underline size={16}/></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("bold", null, type)} title="Bold"><Bold size={16} /></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("italic", null, type)} title="Italic"><Italic size={16} /></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("underline", null, type)} title="Underline"><Underline size={16} /></button>
       </div>
 
       <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-1">
-        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyLeft", null, type)} title="Align Left"><AlignLeft size={16}/></button>
-        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyCenter", null, type)} title="Align Center"><AlignCenter size={16}/></button>
-        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyRight", null, type)} title="Align Right"><AlignRight size={16}/></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyLeft", null, type)} title="Align Left"><AlignLeft size={16} /></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyCenter", null, type)} title="Align Center"><AlignCenter size={16} /></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyRight", null, type)} title="Align Right"><AlignRight size={16} /></button>
       </div>
 
       <div className="flex items-center gap-2">
-         <select 
+        <select
           onChange={(e) => format("fontSize", e.target.value, type)}
           className="bg-transparent text-sm text-gray-700 font-medium focus:outline-none cursor-pointer"
         >
@@ -318,15 +319,15 @@ function Notes() {
           <option value="5">Large</option>
           <option value="7">Huge</option>
         </select>
-        
+
         <div className="relative group flex items-center">
-            <Palette size={16} className="text-gray-500 absolute left-1 pointer-events-none"/>
-            <input 
-              type="color" 
-              className="opacity-0 w-8 h-8 cursor-pointer absolute"
-              onChange={(e) => format("foreColor", e.target.value, type)} 
-            />
-            <div className="w-6 h-6 rounded-full border border-gray-300 bg-gradient-to-br from-red-400 to-blue-400 ml-1"></div>
+          <Palette size={16} className="text-gray-500 absolute left-1 pointer-events-none" />
+          <input
+            type="color"
+            className="opacity-0 w-8 h-8 cursor-pointer absolute"
+            onChange={(e) => format("foreColor", e.target.value, type)}
+          />
+          <div className="w-6 h-6 rounded-full border border-gray-300 bg-gradient-to-br from-red-400 to-blue-400 ml-1"></div>
         </div>
       </div>
     </div>
@@ -335,13 +336,11 @@ function Notes() {
   return (
     <div className="min-h-screen bg-[#F3F4F6] text-slate-800 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        
+
         {/* --- HEADER --- */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
-              <StickyNote className="w-8 h-8 text-white" />
-            </div>
+            <img src={Logo} alt="Logo" className="w-14 h-14 rounded-2xl shadow-lg shadow-blue-200 object-cover" />
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
                 My Notes
@@ -349,7 +348,7 @@ function Notes() {
               <p className="text-sm text-slate-500 font-medium">Capture ideas, keep them safe.</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowCreateBox(true)}
@@ -389,16 +388,16 @@ function Notes() {
         {showCreateBox && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setShowCreateBox(false)} />
-            
+
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              
+
               {/* Modal Header */}
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <h2 className="text-lg font-bold text-gray-800">Create New Note</h2>
                 <div className="flex gap-2">
-                   <button onClick={handleUndoCreate} className="p-2 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors" title="Undo"><Undo2 size={18}/></button>
-                   <button onClick={handleRedoCreate} className="p-2 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors" title="Redo"><Redo2 size={18}/></button>
-                   <button onClick={() => setShowCreateBox(false)} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-lg text-gray-400 transition-colors"><X size={20}/></button>
+                  <button onClick={handleUndoCreate} className="p-2 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors" title="Undo"><Undo2 size={18} /></button>
+                  <button onClick={handleRedoCreate} className="p-2 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors" title="Redo"><Redo2 size={18} /></button>
+                  <button onClick={() => setShowCreateBox(false)} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-lg text-gray-400 transition-colors"><X size={20} /></button>
                 </div>
               </div>
 
@@ -411,7 +410,7 @@ function Notes() {
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full text-2xl font-bold text-gray-800 placeholder-gray-300 border-none outline-none bg-transparent mb-4"
                 />
-                
+
                 {showCreateToolbar && <EditorToolbar type="create" />}
 
                 <div
@@ -456,14 +455,14 @@ function Notes() {
           </div>
         ) : notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                <StickyNote className="w-10 h-10 text-gray-300" />
-             </div>
-             <h3 className="text-xl font-bold text-gray-800 mb-2">No notes yet</h3>
-             <p className="text-gray-500 max-w-sm mx-auto mb-8">
-               Your mind is clear! Tap the button below to capture your first idea.
-             </p>
-             <button
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <StickyNote className="w-10 h-10 text-gray-300" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">No notes yet</h3>
+            <p className="text-gray-500 max-w-sm mx-auto mb-8">
+              Your mind is clear! Tap the button below to capture your first idea.
+            </p>
+            <button
               onClick={() => setShowCreateBox(true)}
               className="text-blue-600 font-semibold hover:underline"
             >
@@ -503,7 +502,7 @@ function Notes() {
                     <Pin className="w-4 h-4 text-orange-400 fill-orange-400 rotate-45" />
                   </div>
                 )}
-                
+
                 {/* Lock Overlay */}
                 {note.isLocked && (
                   <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
@@ -512,28 +511,28 @@ function Notes() {
                 )}
 
                 <div className="p-5">
-                   {/* Hover Actions (Absolute Top Right) */}
-                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30">
-                     <button
-                        onClick={(e) => { e.stopPropagation(); handleTogglePin(note._id); }}
-                        className={`p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 transition-colors ${note.isPinned ? 'bg-orange-100 text-orange-600' : 'bg-white/90 text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
-                        title={note.isPinned ? "Unpin" : "Pin"}
-                      >
-                        <Pin className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggleLock(note); }}
-                        className={`p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 transition-colors ${note.isLocked ? 'bg-red-100 text-red-600' : 'bg-white/90 text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
-                      >
-                        {note.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteNote(note._id); }}
-                        className="p-1.5 bg-white/90 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 backdrop-blur-sm shadow-sm border border-gray-100 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                   </div>
+                  {/* Hover Actions (Absolute Top Right) */}
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleTogglePin(note._id); }}
+                      className={`p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 transition-colors ${note.isPinned ? 'bg-orange-100 text-orange-600' : 'bg-white/90 text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
+                      title={note.isPinned ? "Unpin" : "Pin"}
+                    >
+                      <Pin className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleLock(note); }}
+                      className={`p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 transition-colors ${note.isLocked ? 'bg-red-100 text-red-600' : 'bg-white/90 text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
+                    >
+                      {note.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteNote(note._id); }}
+                      className="p-1.5 bg-white/90 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 backdrop-blur-sm shadow-sm border border-gray-100 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
                   {/* Note Content Preview */}
                   <div className={note.isLocked ? "blur-sm select-none opacity-50" : ""}>
@@ -548,28 +547,28 @@ function Notes() {
                         className="w-full text-lg font-bold p-1 -ml-1 border-b-2 border-blue-500 bg-transparent focus:outline-none"
                       />
                     ) : (
-                       <h3 
+                      <h3
                         className={`text-lg font-bold text-gray-800 mb-2 leading-tight ${!note.title && 'text-gray-400 italic'}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if(!note.isLocked) {
-                             setEditingNoteId(note._id);
-                             setEditingTitle(note.title || "");
+                          if (!note.isLocked) {
+                            setEditingNoteId(note._id);
+                            setEditingTitle(note.title || "");
                           }
                         }}
-                       >
-                         {note.title || "Untitled Note"}
-                       </h3>
+                      >
+                        {note.title || "Untitled Note"}
+                      </h3>
                     )}
-                    
+
                     <p className="text-gray-600 text-sm line-clamp-4 leading-relaxed whitespace-pre-line min-h-[1.5rem]">
                       {note.summary || note.content?.replace(/<[^>]*>?/gm, '').substring(0, 100) || "No content"}
                     </p>
-                    
+
                     <div className="mt-4 flex items-center justify-between">
-                       <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
-                         {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                       </span>
+                      <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
+                        {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -582,121 +581,121 @@ function Notes() {
       {/* --- EDIT MODAL --- */}
       {openNote && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setOpenNote(null)} />
-           
-           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-             
-             {/* Header */}
-             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
-                <div className="flex-1 mr-4">
-                  <h2 className="text-xl font-bold text-gray-800 truncate">{openNote.title || "Untitled"}</h2>
-                  <p className="text-xs text-gray-400">
-                    Last edited {new Date(openNote.updatedAt || openNote.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                   <button onClick={handleUndoEdit} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Undo2 size={18}/></button>
-                   <button onClick={handleRedoEdit} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Redo2 size={18}/></button>
-                   
-                   {/* Options Dropdown */}
-                   <div className="relative">
-                      <button 
-                        onClick={() => setShowOptions(!showOptions)}
-                        className={`p-2 rounded-lg text-gray-500 transition-colors ${showOptions ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}
-                      >
-                        <MoreVertical size={18} />
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setOpenNote(null)} />
+
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+              <div className="flex-1 mr-4">
+                <h2 className="text-xl font-bold text-gray-800 truncate">{openNote.title || "Untitled"}</h2>
+                <p className="text-xs text-gray-400">
+                  Last edited {new Date(openNote.updatedAt || openNote.createdAt).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button onClick={handleUndoEdit} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Undo2 size={18} /></button>
+                <button onClick={handleRedoEdit} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Redo2 size={18} /></button>
+
+                {/* Options Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowOptions(!showOptions)}
+                    className={`p-2 rounded-lg text-gray-500 transition-colors ${showOptions ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+
+                  {showOptions && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                      <button onClick={() => { setShowFind(!showFind); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
+                        <Search size={16} /> Find in note
                       </button>
-
-                      {showOptions && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                          <button onClick={() => { setShowFind(!showFind); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
-                             <Search size={16} /> Find in note
-                          </button>
-                          <button onClick={() => { shareNote(openNote._id); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
-                             <Share2 size={16} /> Share note
-                          </button>
-                          {openNote.isLocked && (
-                             <button onClick={() => { setPinInput(""); setPinError(""); setShowPinModal(true); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
-                                <Unlock size={16} /> Unlock Permanently
-                             </button>
-                          )}
-                          <div className="h-px bg-gray-100 my-1"></div>
-                          <button onClick={() => { handleDeleteNote(openNote._id); setOpenNote(null); }} className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-3 text-sm">
-                             <X size={16} /> Delete Note
-                          </button>
-                        </div>
+                      <button onClick={() => { shareNote(openNote._id); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
+                        <Share2 size={16} /> Share note
+                      </button>
+                      {openNote.isLocked && (
+                        <button onClick={() => { setPinInput(""); setPinError(""); setShowPinModal(true); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
+                          <Unlock size={16} /> Unlock Permanently
+                        </button>
                       )}
-                   </div>
-                   
-                   <button onClick={() => setOpenNote(null)} className="ml-2 p-2 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400">
-                     <X size={20}/>
-                   </button>
+                      <div className="h-px bg-gray-100 my-1"></div>
+                      <button onClick={() => { handleDeleteNote(openNote._id); setOpenNote(null); }} className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-3 text-sm">
+                        <X size={16} /> Delete Note
+                      </button>
+                    </div>
+                  )}
                 </div>
-             </div>
 
-             {/* Find Bar */}
-             {showFind && (
-               <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-100 flex items-center gap-3">
-                 <Search size={16} className="text-yellow-600"/>
-                 <input 
-                   autoFocus
-                   type="text" 
-                   placeholder="Find in note..." 
-                   className="bg-transparent border-none outline-none text-sm w-full text-yellow-900 placeholder-yellow-400"
-                   value={findWord}
-                   onChange={(e) => setFindWord(e.target.value)}
-                 />
-                 <button onClick={() => { setShowFind(false); setFindWord(""); }} className="text-yellow-600 hover:text-yellow-800"><X size={14}/></button>
-               </div>
-             )}
-
-             {/* Content Area */}
-             <div className="flex-1 flex flex-col overflow-hidden relative">
-               <div className="p-6 pb-2">
-                 {showEditToolbar && <EditorToolbar type="edit" />}
-               </div>
-               
-               <div className="flex-1 overflow-y-auto px-6 pb-6 relative">
-                 <div
-                    ref={editEditorRef}
-                    contentEditable
-                    className="w-full min-h-full outline-none text-gray-700 text-lg leading-relaxed whitespace-pre-wrap"
-                    suppressContentEditableWarning={true}
-                    onInput={(e) => {
-                      const html = e.currentTarget.innerHTML;
-                      setUndoStackEdit([...undoStackEdit, editContent]);
-                      setEditContent(html);
-                      setRedoStackEdit([]);
-                    }}
-                 ></div>
-                 
-                 {/* Highlight Overlay (Rendered conditionally) */}
-                 {findWord.trim() && (
-                    <div 
-                      className="absolute inset-0 px-6 pb-6 pointer-events-none text-lg leading-relaxed whitespace-pre-wrap text-transparent z-10"
-                      dangerouslySetInnerHTML={{ __html: getHighlightedContent(editContent, findWord).replace(/<mark/g, '<mark style="color:transparent; background: rgba(253, 224, 71, 0.5);"') }}
-                    />
-                 )}
-               </div>
-             </div>
-
-             {/* Footer */}
-             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                <button
-                  onClick={() => setOpenNote(null)}
-                  className="px-5 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-xl transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={handleUpdateContent}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-md transition-all"
-                >
-                  Save Changes
+                <button onClick={() => setOpenNote(null)} className="ml-2 p-2 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400">
+                  <X size={20} />
                 </button>
               </div>
-           </div>
+            </div>
+
+            {/* Find Bar */}
+            {showFind && (
+              <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-100 flex items-center gap-3">
+                <Search size={16} className="text-yellow-600" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Find in note..."
+                  className="bg-transparent border-none outline-none text-sm w-full text-yellow-900 placeholder-yellow-400"
+                  value={findWord}
+                  onChange={(e) => setFindWord(e.target.value)}
+                />
+                <button onClick={() => { setShowFind(false); setFindWord(""); }} className="text-yellow-600 hover:text-yellow-800"><X size={14} /></button>
+              </div>
+            )}
+
+            {/* Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden relative">
+              <div className="p-6 pb-2">
+                {showEditToolbar && <EditorToolbar type="edit" />}
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 pb-6 relative">
+                <div
+                  ref={editEditorRef}
+                  contentEditable
+                  className="w-full min-h-full outline-none text-gray-700 text-lg leading-relaxed whitespace-pre-wrap"
+                  suppressContentEditableWarning={true}
+                  onInput={(e) => {
+                    const html = e.currentTarget.innerHTML;
+                    setUndoStackEdit([...undoStackEdit, editContent]);
+                    setEditContent(html);
+                    setRedoStackEdit([]);
+                  }}
+                ></div>
+
+                {/* Highlight Overlay (Rendered conditionally) */}
+                {findWord.trim() && (
+                  <div
+                    className="absolute inset-0 px-6 pb-6 pointer-events-none text-lg leading-relaxed whitespace-pre-wrap text-transparent z-10"
+                    dangerouslySetInnerHTML={{ __html: getHighlightedContent(editContent, findWord).replace(/<mark/g, '<mark style="color:transparent; background: rgba(253, 224, 71, 0.5);"') }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setOpenNote(null)}
+                className="px-5 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleUpdateContent}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-md transition-all"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -704,15 +703,15 @@ function Notes() {
       {showPinModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl scale-100 animate-in fade-in zoom-in-95 duration-200">
-             <div className="text-center mb-6">
-                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isSettingPin ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
-                   {isSettingPin ? <Lock size={24}/> : <Unlock size={24}/>}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">{isSettingPin ? "Set a Security PIN" : "Enter PIN to Unlock"}</h3>
-                <p className="text-sm text-gray-500 mt-1">Keep this note private.</p>
-             </div>
+            <div className="text-center mb-6">
+              <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isSettingPin ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                {isSettingPin ? <Lock size={24} /> : <Unlock size={24} />}
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">{isSettingPin ? "Set a Security PIN" : "Enter PIN to Unlock"}</h3>
+              <p className="text-sm text-gray-500 mt-1">Keep this note private.</p>
+            </div>
 
-             <input
+            <input
               type="password"
               value={pinInput}
               autoFocus
@@ -729,14 +728,14 @@ function Notes() {
             )}
 
             <div className="flex gap-3">
-               <button
+              <button
                 onClick={() => setShowPinModal(false)}
                 className="flex-1 py-3 border border-gray-200 rounded-xl font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               {isSettingPin ? (
-                 <button
+                <button
                   onClick={handleSubmitPin}
                   className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
                 >
@@ -744,21 +743,21 @@ function Notes() {
                 </button>
               ) : (
                 <>
-                 {openNote && openNote.isLocked ? (
-                   <button
-                    onClick={handlePermanentUnlock}
-                    className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
-                   >
-                     Remove Lock
-                   </button>
-                 ) : (
-                   <button
-                    onClick={handleSubmitPin}
-                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
-                   >
-                     Unlock
-                   </button>
-                 )}
+                  {openNote && openNote.isLocked ? (
+                    <button
+                      onClick={handlePermanentUnlock}
+                      className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+                    >
+                      Remove Lock
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSubmitPin}
+                      className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Unlock
+                    </button>
+                  )}
                 </>
               )}
             </div>
