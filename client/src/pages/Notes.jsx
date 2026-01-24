@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, Undo2, Redo2, Share2, Loader2, StickyNote } from "lucide-react";
 import api from "../api/axios";
 
@@ -8,6 +8,16 @@ function Notes() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  // Create note toolbar toggle
+const [showCreateToolbar, setShowCreateToolbar] = useState(false);
+
+// Edit note toolbar toggle
+const [showEditToolbar, setShowEditToolbar] = useState(false);
+
+ 
+  
+  const createEditorRef = useRef(null);
+  const editEditorRef = useRef(null);
 
   // Create note toggle
   const [showCreateBox, setShowCreateBox] = useState(false);
@@ -67,6 +77,13 @@ function Notes() {
       setShowFind(false);
     }
   }, [openNote]);
+
+  useEffect(() => {
+  if (openNote && editEditorRef.current) {
+    editEditorRef.current.innerHTML = openNote.content || "";
+  }
+}, [openNote]);
+
 
   // Create note
   const handleCreateNote = async (e) => {
@@ -238,6 +255,28 @@ function Notes() {
     alert(`Share link copied: ${link}`);
   };
 
+function placeCaretAtEnd(el) {
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+
+ const format = (command, value = null, type = "create") => {
+  const ref = type === "edit" ? editEditorRef : createEditorRef;
+  const editor = ref.current;
+  if (!editor) return;
+
+  editor.focus(); // important to keep the caret in the editor
+  document.execCommand(command, false, value);
+};
+
+
+
   // Function to highlight matches inside preview only
   const getHighlightedContent = (text, word) => {
     if (!word.trim()) return text;
@@ -318,6 +357,13 @@ function Notes() {
                 >
                   <Redo2 className="w-4 h-4" />
                 </button>
+                <button
+      type="button"
+      onClick={() => setShowCreateToolbar((prev) => !prev)}
+      className="px-3 py-2 bg-white/20 hover:bg-white/30 text-gray-800 rounded-lg transition-all font-medium"
+    >
+      Edit
+    </button>
               </div>
             </div>
 
@@ -329,20 +375,45 @@ function Notes() {
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full mb-4 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
-              <textarea
-                placeholder="Write your note here..."
-                value={content}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  if (newValue !== content) {
-                    setUndoStackCreate([...undoStackCreate, content]);
-                    setContent(newValue);
-                    setRedoStackCreate([]);
-                  }
-                }}
-                
-                className="w-full flex-1 px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              {/* Toolbar */}
+
+{/* Toolbar */}
+{showCreateToolbar && (
+  <div className="flex gap-2 mb-2 border p-2 rounded-lg bg-gray-50">
+    <button onClick={() => format("bold", null, "create")}>𝐁</button>
+    <button onClick={() => format("italic", null, "create")}>𝐼</button>
+    <button onClick={() => format("underline", null, "create")}>𝐔</button>
+
+    <select onChange={(e) => format("fontSize", e.target.value, "create")}>
+      <option value="">Size</option>
+      <option value="3">Small</option>
+      <option value="4">Normal</option>
+      <option value="5">Large</option>
+    </select>
+
+    <input type="color" onChange={(e) => format("foreColor", e.target.value, "create")} />
+
+    <button onClick={() => format("justifyLeft", null, "create")}>☰⬅</button>
+    <button onClick={() => format("justifyCenter", null, "create")}>☰</button>
+    <button onClick={() => format("justifyRight", null, "create")}>➡☰</button>
+  </div>
+)}
+
+
+<div
+  ref={createEditorRef}
+  contentEditable
+  className="w-full flex-1 px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+  suppressContentEditableWarning={true}
+  onInput={(e) => {
+    const html = e.currentTarget.innerHTML;
+    setUndoStackCreate([...undoStackCreate, content]);
+    setContent(html);
+    setRedoStackCreate([]);
+  }}
+></div>
+
+
 
               <div className="flex gap-3 mt-6">
                 <button
@@ -565,6 +636,17 @@ function Notes() {
                           <span className="text-sm">Unlock forever</span>
                         </button>
                       )}
+         <button
+  onClick={() => {
+    setShowEditToolbar((prev) => !prev);
+    setShowOptions(false);
+  }}
+  className="w-full flex items-center gap-2 px-4 py-3 hover:bg-blue-50 transition-colors"
+>
+  <span className="w-4 h-4 text-gray-600 flex items-center justify-center">✎</span>
+  <span className="text-sm font-medium">Edit</span>
+</button>
+
                     </div>
                   )}
                 </div>
@@ -590,19 +672,45 @@ function Notes() {
                 </div>
               )}
 
-              <textarea
-                value={editContent}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  if (newValue !== editContent) {
-                    setUndoStackEdit([...undoStackEdit, editContent]);
-                    setEditContent(newValue);
-                    setRedoStackEdit([]);
-                  }
-                }}
-                className="w-full p-4 border border-gray-300 rounded-xl resize-none outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh]"
-                style={{ lineHeight: "1.6" }}
-              />
+             
+
+{/* Toolbar */}
+{showEditToolbar && (
+  <div className="flex gap-2 mb-2 border p-2 rounded-lg bg-gray-50">
+    <button onClick={() => format("bold", null, "edit")}>𝐁</button>
+    <button onClick={() => format("italic", null, "edit")}>𝐼</button>
+    <button onClick={() => format("underline", null, "edit")}>𝐔</button>
+
+    <select onChange={(e) => format("fontSize", e.target.value, "edit")}>
+      <option value="">Size</option>
+      <option value="3">Small</option>
+      <option value="4">Normal</option>
+      <option value="5">Large</option>
+    </select>
+
+    <input type="color" onChange={(e) => format("foreColor", e.target.value, "edit")} />
+
+    <button onClick={() => format("justifyLeft", null, "edit")}>☰⬅</button>
+    <button onClick={() => format("justifyCenter", null, "edit")}>☰</button>
+    <button onClick={() => format("justifyRight", null, "edit")}>➡☰</button>
+  </div>
+)}
+
+
+<div
+  ref={editEditorRef}
+  contentEditable
+  className="w-full p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh]"
+  suppressContentEditableWarning={true}
+  onInput={(e) => {
+    const html = e.currentTarget.innerHTML;
+    setUndoStackEdit([...undoStackEdit, editContent]);
+    setEditContent(html);
+    setRedoStackEdit([]);
+  }}
+></div>
+
+
 
               {findWord.trim() && (
                 <div

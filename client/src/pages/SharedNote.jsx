@@ -2,6 +2,8 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { FileText, Tag, Calendar, Share2 } from "lucide-react";
+import DOMPurify from "dompurify";
+
 
 function SharedNote() {
   const { id } = useParams();
@@ -63,9 +65,11 @@ function SharedNote() {
                 <h2 className="text-lg font-semibold text-gray-800">Content</h2>
               </div>
               <div className="prose prose-lg max-w-none">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {note.content}
-                </p>
+                <div
+  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }}
+></div>
+
               </div>
             </div>
 
@@ -78,9 +82,11 @@ function SharedNote() {
                   </div>
                   Summary
                 </h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {note.summary}
-                </p>
+                <div
+  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.summary) }}
+></div>
+
               </div>
             )}
 
