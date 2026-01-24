@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, Undo2, Redo2, Share2, Loader2, StickyNote } from "lucide-react";
+import { 
+  Search, Plus, LogOut, Pin, Lock, Unlock, MoreVertical, 
+  Undo2, Redo2, Share2, Loader2, StickyNote, X, 
+  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Palette
+} from "lucide-react";
 import api from "../api/axios";
 import DOMPurify from "dompurify";
-
 
 function Notes() {
   const [notes, setNotes] = useState([]);
@@ -10,14 +13,11 @@ function Notes() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  // Create note toolbar toggle
-const [showCreateToolbar, setShowCreateToolbar] = useState(false);
-
-// Edit note toolbar toggle
-const [showEditToolbar, setShowEditToolbar] = useState(false);
-
- 
   
+  // Toolbar toggles
+  const [showCreateToolbar, setShowCreateToolbar] = useState(true); // Default to true for better UX
+  const [showEditToolbar, setShowEditToolbar] = useState(true);
+
   const createEditorRef = useRef(null);
   const editEditorRef = useRef(null);
 
@@ -45,21 +45,22 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
   // Options menu
   const [showOptions, setShowOptions] = useState(false);
 
-  //in order to fetch notes from backend(pin)
+  // Order state
   const [originalOrder, setOriginalOrder] = useState([]);
 
-  // Lock states
+  // Lock/Pin states
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinNote, setPinNote] = useState(null);
   const [isSettingPin, setIsSettingPin] = useState(false);
   const [pinError, setPinError] = useState("");
 
-  // Fetch notes
+  // --- API CALLS ---
   const fetchNotes = async (searchText = "") => {
     try {
       const res = await api.get("/notes", { params: { search: searchText } });
       setOriginalOrder(res.data.map((note) => note._id));
+      // Sort pinned to top
       setNotes(res.data.sort((a, b) => (b.isPinned === true) - (a.isPinned === true)));
     } catch (error) {
       console.error(error);
@@ -81,21 +82,21 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
   }, [openNote]);
 
   useEffect(() => {
-  if (openNote && editEditorRef.current) {
-    editEditorRef.current.innerHTML = openNote.content || "";
-  }
-}, [openNote]);
+    if (openNote && editEditorRef.current) {
+      editEditorRef.current.innerHTML = openNote.content || "";
+    }
+  }, [openNote]);
 
-
-  // Create note
+  // --- HANDLERS ---
   const handleCreateNote = async (e) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim() && !title.trim()) return; // Don't save empty
     try {
       const res = await api.post("/notes", { title, content });
       setNotes([res.data, ...notes]);
       setTitle("");
       setContent("");
+      if(createEditorRef.current) createEditorRef.current.innerHTML = "";
       setUndoStackCreate([]);
       setRedoStackCreate([]);
       setShowCreateBox(false);
@@ -104,8 +105,8 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
     }
   };
 
-  // Delete note
   const handleDeleteNote = async (id) => {
+    if(!window.confirm("Are you sure you want to delete this note?")) return;
     try {
       await api.delete(`/notes/${id}`);
       setNotes(notes.filter((note) => note._id !== id));
@@ -114,7 +115,6 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
     }
   };
 
-  // Update title
   const handleUpdateTitle = async (id) => {
     if (!editingTitle.trim()) {
       setEditingNoteId(null);
@@ -130,9 +130,7 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
     }
   };
 
-  // Update content
   const handleUpdateContent = async () => {
-    if (!editContent.trim()) return;
     try {
       const res = await api.put(`/notes/${openNote._id}`, { content: editContent });
       setNotes(notes.map((n) => (n._id === openNote._id ? res.data : n)));
@@ -147,78 +145,66 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
     }
   };
 
-  // Undo/Redo handlers for create
-  const handleUndoCreate = () => {
-  if (undoStackCreate.length === 0) return;
-
-  const last = undoStackCreate[undoStackCreate.length - 1];
-
-  setRedoStackCreate((prev) => [content, ...prev]);
-  setUndoStackCreate((prev) => prev.slice(0, -1));
-  setContent(last);
-
-  // 🔥 update editor DOM
-  if (createEditorRef.current) {
-    createEditorRef.current.innerHTML = last;
-placeCaretAtEnd(createEditorRef.current);
-
+  // --- UNDO/REDO LOGIC ---
+  function placeCaretAtEnd(el) {
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
   }
-};
 
+  const handleUndoCreate = () => {
+    if (undoStackCreate.length === 0) return;
+    const last = undoStackCreate[undoStackCreate.length - 1];
+    setRedoStackCreate((prev) => [content, ...prev]);
+    setUndoStackCreate((prev) => prev.slice(0, -1));
+    setContent(last);
+    if (createEditorRef.current) {
+      createEditorRef.current.innerHTML = last;
+      placeCaretAtEnd(createEditorRef.current);
+    }
+  };
 
   const handleRedoCreate = () => {
-  if (redoStackCreate.length === 0) return;
+    if (redoStackCreate.length === 0) return;
+    const next = redoStackCreate[0];
+    setUndoStackCreate((prev) => [...prev, content]);
+    setRedoStackCreate((prev) => prev.slice(1));
+    setContent(next);
+    if (createEditorRef.current) {
+      createEditorRef.current.innerHTML = next;
+      placeCaretAtEnd(createEditorRef.current);
+    }
+  };
 
-  const next = redoStackCreate[0];
-
-  setUndoStackCreate((prev) => [...prev, content]);
-  setRedoStackCreate((prev) => prev.slice(1));
-  setContent(next);
-
-  if (createEditorRef.current) {
-    createEditorRef.current.innerHTML = next;
-placeCaretAtEnd(createEditorRef.current);
-
-  }
-};
-
-
-  // Undo/Redo handlers for edit modal
   const handleUndoEdit = () => {
-  if (undoStackEdit.length === 0) return;
-
-  const last = undoStackEdit[undoStackEdit.length - 1];
-
-  setRedoStackEdit((prev) => [editContent, ...prev]);
-  setUndoStackEdit((prev) => prev.slice(0, -1));
-  setEditContent(last);
-
-  if (editEditorRef.current) {
-    editEditorRef.current.innerHTML = last;
-placeCaretAtEnd(editEditorRef.current);
-
-  }
-};
-
+    if (undoStackEdit.length === 0) return;
+    const last = undoStackEdit[undoStackEdit.length - 1];
+    setRedoStackEdit((prev) => [editContent, ...prev]);
+    setUndoStackEdit((prev) => prev.slice(0, -1));
+    setEditContent(last);
+    if (editEditorRef.current) {
+      editEditorRef.current.innerHTML = last;
+      placeCaretAtEnd(editEditorRef.current);
+    }
+  };
 
   const handleRedoEdit = () => {
-  if (redoStackEdit.length === 0) return;
+    if (redoStackEdit.length === 0) return;
+    const next = redoStackEdit[0];
+    setUndoStackEdit((prev) => [...prev, editContent]);
+    setRedoStackEdit((prev) => prev.slice(1));
+    setEditContent(next);
+    if (editEditorRef.current) {
+      editEditorRef.current.innerHTML = next;
+      placeCaretAtEnd(editEditorRef.current);
+    }
+  };
 
-  const next = redoStackEdit[0];
-
-  setUndoStackEdit((prev) => [...prev, editContent]);
-  setRedoStackEdit((prev) => prev.slice(1));
-  setEditContent(next);
-
-  if (editEditorRef.current) {
-    editEditorRef.current.innerHTML = next;
-placeCaretAtEnd(editEditorRef.current);
-
-  }
-};
-
-
-  // Toggle pin note
+  // --- PIN/LOCK LOGIC ---
   const handleTogglePin = async (id) => {
     try {
       const res = await api.patch(`/notes/${id}/pin`);
@@ -236,7 +222,6 @@ placeCaretAtEnd(editEditorRef.current);
     }
   };
 
-  // Toggle lock note
   const handleToggleLock = (note) => {
     setPinNote(note);
     setIsSettingPin(!note.isLocked);
@@ -245,7 +230,6 @@ placeCaretAtEnd(editEditorRef.current);
     setShowPinModal(true);
   };
 
-  // Submit PIN for setting or verifying
   const handleSubmitPin = async () => {
     if (!pinInput.trim()) return;
     try {
@@ -253,10 +237,14 @@ placeCaretAtEnd(editEditorRef.current);
         ? `/notes/${pinNote._id}/lock`
         : `/notes/${pinNote._id}/verify-pin`;
       const res = await api.patch(endpoint, { pin: pinInput });
+      
       if (!isSettingPin) {
+        // Correct pin entered, open note
         setOpenNote(pinNote);
         setEditContent(pinNote.content);
       }
+      
+      // Update local state
       setNotes((prev) =>
         prev.map((n) => (n._id === pinNote._id ? res.data : n))
       );
@@ -267,17 +255,11 @@ placeCaretAtEnd(editEditorRef.current);
     }
   };
 
-  // Unlock note permanently
   const handlePermanentUnlock = async () => {
     if (!pinInput.trim()) return;
     try {
-      const res = await api.patch(
-        `/notes/${openNote._id}/unlock`,
-        { pin: pinInput }
-      );
-      setNotes((prev) =>
-        prev.map((n) => (n._id === openNote._id ? res.data : n))
-      );
+      const res = await api.patch(`/notes/${openNote._id}/unlock`, { pin: pinInput });
+      setNotes((prev) => prev.map((n) => (n._id === openNote._id ? res.data : n)));
       setOpenNote(res.data);
       setPinInput("");
       setPinError("");
@@ -287,215 +269,209 @@ placeCaretAtEnd(editEditorRef.current);
     }
   };
 
-  // Share note
+  // --- UTILS ---
   const shareNote = (noteId) => {
     const link = `${window.location.origin}/share/${noteId}`;
     navigator.clipboard.writeText(link);
     alert(`Share link copied: ${link}`);
   };
 
-function placeCaretAtEnd(el) {
-  el.focus();
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(false);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
+  const format = (command, value = null, type = "create") => {
+    const ref = type === "edit" ? editEditorRef : createEditorRef;
+    const editor = ref.current;
+    if (!editor) return;
+    editor.focus();
+    document.execCommand(command, false, value);
+  };
 
-
- const format = (command, value = null, type = "create") => {
-  const ref = type === "edit" ? editEditorRef : createEditorRef;
-  const editor = ref.current;
-  if (!editor) return;
-
-  editor.focus(); // important to keep the caret in the editor
-  document.execCommand(command, false, value);
-};
-
-
-
-  // Function to highlight matches inside preview only
   const getHighlightedContent = (html, word) => {
-  if (!word.trim()) return DOMPurify.sanitize(html);
+    if (!word.trim()) return DOMPurify.sanitize(html);
+    const cleanHtml = DOMPurify.sanitize(html);
+    const regex = new RegExp(`(${word})`, "gi");
+    return cleanHtml.replace(regex, '<mark class="bg-yellow-300 rounded-sm">$1</mark>');
+  };
 
-  const cleanHtml = DOMPurify.sanitize(html);
+  // --- COMPONENTS ---
+  
+  // Reusable Toolbar Component to keep things clean
+  const EditorToolbar = ({ type }) => (
+    <div className="flex flex-wrap items-center gap-1 mb-3 p-2 bg-gray-50 border border-gray-200 rounded-xl">
+      <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-1">
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("bold", null, type)} title="Bold"><Bold size={16}/></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("italic", null, type)} title="Italic"><Italic size={16}/></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("underline", null, type)} title="Underline"><Underline size={16}/></button>
+      </div>
 
-  const regex = new RegExp(`(${word})`, "gi");
-  return cleanHtml.replace(
-    regex,
-    '<mark class="bg-yellow-300">$1</mark>'
+      <div className="flex gap-0.5 border-r border-gray-300 pr-2 mr-1">
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyLeft", null, type)} title="Align Left"><AlignLeft size={16}/></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyCenter", null, type)} title="Align Center"><AlignCenter size={16}/></button>
+        <button className="p-1.5 hover:bg-gray-200 rounded text-gray-700 transition-colors" onClick={() => format("justifyRight", null, type)} title="Align Right"><AlignRight size={16}/></button>
+      </div>
+
+      <div className="flex items-center gap-2">
+         <select 
+          onChange={(e) => format("fontSize", e.target.value, type)}
+          className="bg-transparent text-sm text-gray-700 font-medium focus:outline-none cursor-pointer"
+        >
+          <option value="3">Normal</option>
+          <option value="1">Small</option>
+          <option value="5">Large</option>
+          <option value="7">Huge</option>
+        </select>
+        
+        <div className="relative group flex items-center">
+            <Palette size={16} className="text-gray-500 absolute left-1 pointer-events-none"/>
+            <input 
+              type="color" 
+              className="opacity-0 w-8 h-8 cursor-pointer absolute"
+              onChange={(e) => format("foreColor", e.target.value, type)} 
+            />
+            <div className="w-6 h-6 rounded-full border border-gray-300 bg-gradient-to-br from-red-400 to-blue-400 ml-1"></div>
+        </div>
+      </div>
+    </div>
   );
-};
-
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-10">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-lg">
+    <div className="min-h-screen bg-[#F3F4F6] text-slate-800 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        
+        {/* --- HEADER --- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
               <StickyNote className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
                 My Notes
               </h1>
-              <p className="text-sm text-gray-500 mt-1">Capture your thoughts</p>
+              <p className="text-sm text-slate-500 font-medium">Capture ideas, keep them safe.</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              window.location.href = "/login";
-            }}
-            className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-200 shadow-sm flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateBox(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-semibold shadow-md shadow-blue-200 transition-all duration-200"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline">New Note</span>
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+              }}
+              className="p-2.5 bg-white text-slate-600 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-xl transition-all duration-200"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-8">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        {/* --- SEARCH BAR --- */}
+        <div className="relative max-w-2xl mx-auto mb-10 group">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+          </div>
           <input
             type="text"
-            placeholder="Search notes by title or content..."
+            placeholder="Search your notes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
+            className="block w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm transition-all duration-200"
           />
         </div>
 
-        {/* New Note Button */}
-        <button
-          onClick={() => setShowCreateBox(!showCreateBox)}
-          className="mb-8 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 font-medium"
-        >
-          <Plus className="w-5 h-5" />
-          New Note
-        </button>
-
-        {/* Create Note Box */}
-        {/* Create Note Box */}
-{showCreateBox && (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white w-full h-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-white">Create a Note</h2>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleUndoCreate}
-                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
-                  title="Undo"
-                >
-                  <Undo2 className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRedoCreate}
-                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
-                  title="Redo"
-                >
-                  <Redo2 className="w-4 h-4" />
-                </button>
-                <button
-      type="button"
-      onClick={() => setShowCreateToolbar((prev) => !prev)}
-      className="px-3 py-2 bg-white/20 hover:bg-white/30 text-gray-800 rounded-lg transition-all font-medium"
-    >
-      Edit
-    </button>
+        {/* --- CREATE MODAL --- */}
+        {showCreateBox && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setShowCreateBox(false)} />
+            
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h2 className="text-lg font-bold text-gray-800">Create New Note</h2>
+                <div className="flex gap-2">
+                   <button onClick={handleUndoCreate} className="p-2 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors" title="Undo"><Undo2 size={18}/></button>
+                   <button onClick={handleRedoCreate} className="p-2 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors" title="Redo"><Redo2 size={18}/></button>
+                   <button onClick={() => setShowCreateBox(false)} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-lg text-gray-400 transition-colors"><X size={20}/></button>
+                </div>
               </div>
-            </div>
 
-            <div className="p-6 flex flex-col flex-1">
-              <input
-                type="text"
-                placeholder="Title (optional)"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full mb-4 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-              {/* Toolbar */}
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+                <input
+                  type="text"
+                  placeholder="Note Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full text-2xl font-bold text-gray-800 placeholder-gray-300 border-none outline-none bg-transparent mb-4"
+                />
+                
+                {showCreateToolbar && <EditorToolbar type="create" />}
 
-{/* Toolbar */}
-{showCreateToolbar && (
-  <div className="flex gap-2 mb-2 border p-2 rounded-lg bg-gray-50">
-    <button onClick={() => format("bold", null, "create")}>𝐁</button>
-    <button onClick={() => format("italic", null, "create")}>𝐼</button>
-    <button onClick={() => format("underline", null, "create")}>𝐔</button>
+                <div
+                  ref={createEditorRef}
+                  contentEditable
+                  className="flex-1 w-full outline-none text-gray-600 text-lg leading-relaxed whitespace-pre-wrap empty:before:content-[attr(placeholder)] empty:before:text-gray-300"
+                  placeholder="Start typing your thoughts..."
+                  suppressContentEditableWarning={true}
+                  onInput={(e) => {
+                    const html = e.currentTarget.innerHTML;
+                    setUndoStackCreate([...undoStackCreate, content]);
+                    setContent(html);
+                    setRedoStackCreate([]);
+                  }}
+                ></div>
+              </div>
 
-    <select onChange={(e) => format("fontSize", e.target.value, "create")}>
-      <option value="">Size</option>
-      <option value="3">Small</option>
-      <option value="4">Normal</option>
-      <option value="5">Large</option>
-    </select>
-
-    <input type="color" onChange={(e) => format("foreColor", e.target.value, "create")} />
-
-    <button onClick={() => format("justifyLeft", null, "create")}>☰⬅</button>
-    <button onClick={() => format("justifyCenter", null, "create")}>☰</button>
-    <button onClick={() => format("justifyRight", null, "create")}>➡☰</button>
-  </div>
-)}
-
-
-<div
-  ref={createEditorRef}
-  contentEditable
-  className="w-full flex-1 px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-  suppressContentEditableWarning={true}
-  onInput={(e) => {
-    const html = e.currentTarget.innerHTML;
-    setUndoStackCreate([...undoStackCreate, content]);
-    setContent(html);
-    setRedoStackCreate([]);
-  }}
-></div>
-
-
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleCreateNote}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2.5 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium"
-                >
-                  Save Note
-                </button>
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
                 <button
                   onClick={() => setShowCreateBox(false)}
-                  className="px-6 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all font-medium"
+                  className="px-5 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
+                <button
+                  onClick={handleCreateNote}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-md shadow-blue-200 transition-all"
+                >
+                  Save Note
+                </button>
               </div>
             </div>
           </div>
-  </div>
         )}
 
-        {/* Notes List */}
+        {/* --- NOTES GRID (MASONRY) --- */}
         {loading ? (
-          <div className="text-center py-12">
-            <Loader2 className="inline-block animate-spin w-12 h-12 text-blue-600" />
-            <p className="text-gray-500 mt-4">Loading notes...</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="animate-spin w-10 h-10 text-blue-500 mb-4" />
+            <p className="text-gray-400 font-medium">Loading your thoughts...</p>
           </div>
         ) : notes.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center mb-4">
-              <StickyNote className="w-12 h-12 text-blue-600" />
-            </div>
-            <p className="text-gray-500 text-lg font-medium">No notes yet</p>
-            <p className="text-gray-400 text-sm mt-1">Create your first note to get started</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                <StickyNote className="w-10 h-10 text-gray-300" />
+             </div>
+             <h3 className="text-xl font-bold text-gray-800 mb-2">No notes yet</h3>
+             <p className="text-gray-500 max-w-sm mx-auto mb-8">
+               Your mind is clear! Tap the button below to capture your first idea.
+             </p>
+             <button
+              onClick={() => setShowCreateBox(true)}
+              className="text-blue-600 font-semibold hover:underline"
+            >
+              Create a note now &rarr;
+            </button>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 pb-20">
             {notes.map((note) => (
               <div
                 key={note._id}
@@ -513,97 +489,89 @@ function placeCaretAtEnd(el) {
                   setShowFind(false);
                   setFindWord("");
                 }}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl border border-gray-100 cursor-pointer relative overflow-hidden group transition-all duration-300 hover:-translate-y-1"
+                className={`
+                  break-inside-avoid relative group bg-white rounded-2xl border border-gray-200/60
+                  hover:border-blue-300/50 hover:shadow-xl hover:shadow-blue-100/50 
+                  transition-all duration-300 ease-in-out cursor-pointer hover:-translate-y-1
+                  overflow-hidden
+                  ${note.isPinned ? 'ring-2 ring-orange-100 bg-orange-50/10' : 'shadow-sm'}
+                `}
               >
+                {/* Pinned Indicator */}
                 {note.isPinned && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 to-orange-400"></div>
+                  <div className="absolute top-3 left-3 z-10">
+                    <Pin className="w-4 h-4 text-orange-400 fill-orange-400 rotate-45" />
+                  </div>
                 )}
                 
+                {/* Lock Overlay */}
+                {note.isLocked && (
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
+                    <Lock className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+
                 <div className="p-5">
-                  {/* Action buttons */}
-                  <div className="absolute top-4 right-4 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTogglePin(note._id);
-                      }}
-                      className="p-2 bg-white rounded-lg shadow-md hover:bg-yellow-50 transition-all text-lg"
-                      title={note.isPinned ? "Unpin Note" : "Pin Note"}
-                    >
-                      {note.isPinned ? "📌" : "📍"}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleLock(note);
-                      }}
-                      className="p-2 bg-white rounded-lg shadow-md hover:bg-blue-50 transition-all text-lg"
-                      title={note.isLocked ? "Unlock Note" : "Lock Note"}
-                    >
-                      {note.isLocked ? "🔒" : "🔓"}
-                    </button>
-                  </div>
+                   {/* Hover Actions (Absolute Top Right) */}
+                   <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30">
+                     <button
+                        onClick={(e) => { e.stopPropagation(); handleTogglePin(note._id); }}
+                        className={`p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 transition-colors ${note.isPinned ? 'bg-orange-100 text-orange-600' : 'bg-white/90 text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
+                        title={note.isPinned ? "Unpin" : "Pin"}
+                      >
+                        <Pin className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggleLock(note); }}
+                        className={`p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100 transition-colors ${note.isLocked ? 'bg-red-100 text-red-600' : 'bg-white/90 text-gray-500 hover:bg-blue-50 hover:text-blue-600'}`}
+                      >
+                        {note.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteNote(note._id); }}
+                        className="p-1.5 bg-white/90 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 backdrop-blur-sm shadow-sm border border-gray-100 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                   </div>
 
-                  <p className="text-xs text-gray-400 mb-3 flex items-center gap-1">
-                    <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                    {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
-
-                  {editingNoteId === note._id ? (
-                    <input
-                      value={editingTitle}
-                      autoFocus
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      onBlur={() => handleUpdateTitle(note._id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleUpdateTitle(note._id);
-                      }}
-                      className="w-full text-lg font-semibold p-2 border border-blue-500 rounded-lg mb-2"
-                    />
-                  ) : (
-                    <h3
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingNoteId(note._id);
-                        setEditingTitle(note.title || "");
-                      }}
-                      className="text-lg font-bold text-gray-800 mb-2 hover:text-blue-600 transition-colors line-clamp-2"
-                    >
-                      {note.title || "Untitled"}
-                    </h3>
-                  )}
-
-                  <div className={note.isLocked ? "blur-sm select-none" : ""}>
-                    {note.summary && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-3">
-                        {note.summary}
-                      </p>
+                  {/* Note Content Preview */}
+                  <div className={note.isLocked ? "blur-sm select-none opacity-50" : ""}>
+                    {editingNoteId === note._id ? (
+                      <input
+                        value={editingTitle}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={() => handleUpdateTitle(note._id)}
+                        onKeyDown={(e) => e.key === "Enter" && handleUpdateTitle(note._id)}
+                        className="w-full text-lg font-bold p-1 -ml-1 border-b-2 border-blue-500 bg-transparent focus:outline-none"
+                      />
+                    ) : (
+                       <h3 
+                        className={`text-lg font-bold text-gray-800 mb-2 leading-tight ${!note.title && 'text-gray-400 italic'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if(!note.isLocked) {
+                             setEditingNoteId(note._id);
+                             setEditingTitle(note.title || "");
+                          }
+                        }}
+                       >
+                         {note.title || "Untitled Note"}
+                       </h3>
                     )}
-                    {note.tags?.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {note.tags.slice(0, 3).map((tag, i) => (
-                          <span key={i} className="text-xs bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-100">
-                            #{tag}
-                          </span>
-                        ))}
-                        {note.tags.length > 3 && (
-                          <span className="text-xs text-gray-400 px-2 py-1">
-                            +{note.tags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    
+                    <p className="text-gray-600 text-sm line-clamp-4 leading-relaxed whitespace-pre-line min-h-[1.5rem]">
+                      {note.summary || note.content?.replace(/<[^>]*>?/gm, '').substring(0, 100) || "No content"}
+                    </p>
+                    
+                    <div className="mt-4 flex items-center justify-between">
+                       <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
+                         {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                       </span>
+                    </div>
                   </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteNote(note._id);
-                    }}
-                    className="text-sm text-red-500 hover:text-red-700 hover:underline transition-colors mt-2 flex items-center gap-1"
-                  >
-                    Delete
-                  </button>
                 </div>
               </div>
             ))}
@@ -611,248 +579,193 @@ function placeCaretAtEnd(el) {
         )}
       </div>
 
-      {/* Edit Modal */}
+      {/* --- EDIT MODAL --- */}
       {openNote && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white w-full h-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white truncate pr-4 flex items-center gap-2">
-                <StickyNote className="w-5 h-5" />
-                {openNote.title || "Untitled"}
-              </h2>
-              <div className="flex gap-2 items-center flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={handleUndoEdit}
-                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
-                  title="Undo"
-                >
-                  <Undo2 className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRedoEdit}
-                  className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
-                  title="Redo"
-                >
-                  <Redo2 className="w-4 h-4" />
-                </button>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowOptions((prev) => !prev)}
-                    className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all"
-                    title="More options"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                  {showOptions && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                      <button
-                        onClick={() => {
-                          setShowFind(!showFind);
-                          setShowOptions(false);
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3"
-                      >
-                        <Search className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm">Find in note</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          shareNote(openNote._id);
-                          setShowOptions(false);
-                        }}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3"
-                      >
-                        <Share2 className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm">Share</span>
-                      </button>
-                      {openNote.isLocked && (
-                        <button
-                          onClick={() => {
-                            setPinInput("");
-                            setPinError("");
-                            setShowPinModal(true);
-                            setShowOptions(false);
-                          }}
-                          className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-center gap-3"
-                        >
-                          <Unlock className="w-4 h-4 text-gray-600" />
-                          <span className="text-sm">Unlock forever</span>
-                        </button>
-                      )}
-         <button
-  onClick={() => {
-    setShowEditToolbar((prev) => !prev);
-    setShowOptions(false);
-  }}
-  className="w-full flex items-center gap-2 px-4 py-3 hover:bg-blue-50 transition-colors"
->
-  <span className="w-4 h-4 text-gray-600 flex items-center justify-center">✎</span>
-  <span className="text-sm font-medium">Edit</span>
-</button>
-
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 flex-1 overflow-y-auto">
-              <p className="text-xs text-gray-400 mb-4 flex items-center gap-1">
-                <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                {new Date(openNote.createdAt).toLocaleString()}
-              </p>
-
-              {showFind && (
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Type word to find..."
-                    value={findWord}
-                    onChange={(e) => setFindWord(e.target.value)}
-                    className="border border-gray-300 pl-10 pr-4 py-2 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              )}
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => setOpenNote(null)} />
+           
+           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
              
+             {/* Header */}
+             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+                <div className="flex-1 mr-4">
+                  <h2 className="text-xl font-bold text-gray-800 truncate">{openNote.title || "Untitled"}</h2>
+                  <p className="text-xs text-gray-400">
+                    Last edited {new Date(openNote.updatedAt || openNote.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                   <button onClick={handleUndoEdit} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Undo2 size={18}/></button>
+                   <button onClick={handleRedoEdit} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500"><Redo2 size={18}/></button>
+                   
+                   {/* Options Dropdown */}
+                   <div className="relative">
+                      <button 
+                        onClick={() => setShowOptions(!showOptions)}
+                        className={`p-2 rounded-lg text-gray-500 transition-colors ${showOptions ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}
+                      >
+                        <MoreVertical size={18} />
+                      </button>
 
-{/* Toolbar */}
-{showEditToolbar && (
-  <div className="flex gap-2 mb-2 border p-2 rounded-lg bg-gray-50">
-    <button onClick={() => format("bold", null, "edit")}>𝐁</button>
-    <button onClick={() => format("italic", null, "edit")}>𝐼</button>
-    <button onClick={() => format("underline", null, "edit")}>𝐔</button>
+                      {showOptions && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                          <button onClick={() => { setShowFind(!showFind); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
+                             <Search size={16} /> Find in note
+                          </button>
+                          <button onClick={() => { shareNote(openNote._id); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
+                             <Share2 size={16} /> Share note
+                          </button>
+                          {openNote.isLocked && (
+                             <button onClick={() => { setPinInput(""); setPinError(""); setShowPinModal(true); setShowOptions(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700">
+                                <Unlock size={16} /> Unlock Permanently
+                             </button>
+                          )}
+                          <div className="h-px bg-gray-100 my-1"></div>
+                          <button onClick={() => { handleDeleteNote(openNote._id); setOpenNote(null); }} className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-3 text-sm">
+                             <X size={16} /> Delete Note
+                          </button>
+                        </div>
+                      )}
+                   </div>
+                   
+                   <button onClick={() => setOpenNote(null)} className="ml-2 p-2 hover:bg-red-50 hover:text-red-600 rounded-lg text-gray-400">
+                     <X size={20}/>
+                   </button>
+                </div>
+             </div>
 
-    <select onChange={(e) => format("fontSize", e.target.value, "edit")}>
-      <option value="">Size</option>
-      <option value="3">Small</option>
-      <option value="4">Normal</option>
-      <option value="5">Large</option>
-    </select>
+             {/* Find Bar */}
+             {showFind && (
+               <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-100 flex items-center gap-3">
+                 <Search size={16} className="text-yellow-600"/>
+                 <input 
+                   autoFocus
+                   type="text" 
+                   placeholder="Find in note..." 
+                   className="bg-transparent border-none outline-none text-sm w-full text-yellow-900 placeholder-yellow-400"
+                   value={findWord}
+                   onChange={(e) => setFindWord(e.target.value)}
+                 />
+                 <button onClick={() => { setShowFind(false); setFindWord(""); }} className="text-yellow-600 hover:text-yellow-800"><X size={14}/></button>
+               </div>
+             )}
 
-    <input type="color" onChange={(e) => format("foreColor", e.target.value, "edit")} />
+             {/* Content Area */}
+             <div className="flex-1 flex flex-col overflow-hidden relative">
+               <div className="p-6 pb-2">
+                 {showEditToolbar && <EditorToolbar type="edit" />}
+               </div>
+               
+               <div className="flex-1 overflow-y-auto px-6 pb-6 relative">
+                 <div
+                    ref={editEditorRef}
+                    contentEditable
+                    className="w-full min-h-full outline-none text-gray-700 text-lg leading-relaxed whitespace-pre-wrap"
+                    suppressContentEditableWarning={true}
+                    onInput={(e) => {
+                      const html = e.currentTarget.innerHTML;
+                      setUndoStackEdit([...undoStackEdit, editContent]);
+                      setEditContent(html);
+                      setRedoStackEdit([]);
+                    }}
+                 ></div>
+                 
+                 {/* Highlight Overlay (Rendered conditionally) */}
+                 {findWord.trim() && (
+                    <div 
+                      className="absolute inset-0 px-6 pb-6 pointer-events-none text-lg leading-relaxed whitespace-pre-wrap text-transparent z-10"
+                      dangerouslySetInnerHTML={{ __html: getHighlightedContent(editContent, findWord).replace(/<mark/g, '<mark style="color:transparent; background: rgba(253, 224, 71, 0.5);"') }}
+                    />
+                 )}
+               </div>
+             </div>
 
-    <button onClick={() => format("justifyLeft", null, "edit")}>☰⬅</button>
-    <button onClick={() => format("justifyCenter", null, "edit")}>☰</button>
-    <button onClick={() => format("justifyRight", null, "edit")}>➡☰</button>
-  </div>
-)}
-
-
-<div
-  ref={editEditorRef}
-  contentEditable
-  className="w-full p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh]"
-  suppressContentEditableWarning={true}
-  onInput={(e) => {
-    const html = e.currentTarget.innerHTML;
-    setUndoStackEdit([...undoStackEdit, editContent]);
-    setEditContent(html);
-    setRedoStackEdit([]);
-  }}
-></div>
-
-
-
-              {findWord.trim() && (
-                <div
-                  className="border border-gray-200 rounded-xl p-4 mt-4 max-h-[40vh] overflow-y-auto text-gray-800 whitespace-pre-wrap break-words bg-gray-50"
-                  dangerouslySetInnerHTML={{
-                    __html: getHighlightedContent(editContent, findWord),
-                  }}
-                />
-              )}
-            </div>
-
-            <div className="p-6 pt-0 border-t border-gray-100">
-              <div className="flex justify-end gap-3">
+             {/* Footer */}
+             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
                 <button
                   onClick={() => setOpenNote(null)}
-                  className="px-6 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all font-medium"
+                  className="px-5 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-xl transition-colors"
                 >
-                  Cancel
+                  Close
                 </button>
                 <button
                   onClick={handleUpdateContent}
-                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl shadow-md transition-all"
                 >
                   Save Changes
                 </button>
               </div>
-            </div>
-          </div>
+           </div>
         </div>
       )}
 
-      {/* PIN Modal */}
+      {/* --- PIN MODAL --- */}
       {showPinModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl">
-                {isSettingPin ? <Lock className="w-6 h-6 text-white" /> : <Unlock className="w-6 h-6 text-white" />}
-              </div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {isSettingPin ? "Set PIN" : "Enter PIN"}
-              </h3>
-            </div>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl scale-100 animate-in fade-in zoom-in-95 duration-200">
+             <div className="text-center mb-6">
+                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isSettingPin ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                   {isSettingPin ? <Lock size={24}/> : <Unlock size={24}/>}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">{isSettingPin ? "Set a Security PIN" : "Enter PIN to Unlock"}</h3>
+                <p className="text-sm text-gray-500 mt-1">Keep this note private.</p>
+             </div>
 
-            <input
+             <input
               type="password"
               value={pinInput}
+              autoFocus
               onChange={(e) => setPinInput(e.target.value)}
-              className="w-full border border-gray-300 px-4 py-3 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              placeholder="Enter PIN"
+              className="w-full text-center text-2xl tracking-widest border border-gray-300 px-4 py-3 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              placeholder="••••"
+              maxLength={6}
             />
 
             {pinError && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2 rounded-lg mb-4">
+              <div className="bg-red-50 text-red-600 text-sm text-center py-2 rounded-lg mb-4 animate-pulse">
                 {pinError}
               </div>
             )}
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button
+            <div className="flex gap-3">
+               <button
                 onClick={() => setShowPinModal(false)}
-                className="px-5 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all font-medium"
+                className="flex-1 py-3 border border-gray-200 rounded-xl font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               {isSettingPin ? (
-                <button
+                 <button
                   onClick={handleSubmitPin}
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium flex items-center gap-2"
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
                 >
-                  <Lock className="w-4 h-4" />
                   Set PIN
                 </button>
               ) : (
                 <>
-                  <button
+                 {openNote && openNote.isLocked ? (
+                   <button
+                    onClick={handlePermanentUnlock}
+                    className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition-colors"
+                   >
+                     Remove Lock
+                   </button>
+                 ) : (
+                   <button
                     onClick={handleSubmitPin}
-                    className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium"
-                  >
-                    Open
-                  </button>
-                  {openNote && openNote.isLocked && (
-                    <button
-                      onClick={handlePermanentUnlock}
-                      className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md font-medium flex items-center gap-2"
-                    >
-                      <Unlock className="w-4 h-4" />
-                      Unlock Forever
-                    </button>
-                  )}
+                    className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+                   >
+                     Unlock
+                   </button>
+                 )}
                 </>
               )}
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
