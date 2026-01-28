@@ -42,6 +42,7 @@ router.get("/share/:id", async (req, res) => {
 router.use(protect);
 
 router.post("/", createNote);
+
 router.get("/", getNotes);
 router.patch("/:id/pin", async (req, res) => {
   try {
@@ -153,7 +154,7 @@ router.patch("/:id/unlock", async (req, res) => {
 
 
 router.get("/:id", getNoteById);
-router.put("/:id", updateNote);
+router.put("/:id",updateNote);
 router.delete("/:id", deleteNote);
 
 

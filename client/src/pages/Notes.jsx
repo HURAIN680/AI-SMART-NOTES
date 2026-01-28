@@ -16,7 +16,9 @@ const [showCreateToolbar, setShowCreateToolbar] = useState(false);
 // Edit note toolbar toggle
 const [showEditToolbar, setShowEditToolbar] = useState(false);
 
- 
+  const createFileInputRef = useRef(null);
+const editFileInputRef = useRef(null);
+
   
   const createEditorRef = useRef(null);
   const editEditorRef = useRef(null);
@@ -86,7 +88,59 @@ const [showEditToolbar, setShowEditToolbar] = useState(false);
   }
 }, [openNote]);
 
+  
+const triggerFileInput = (type = "create") => {
+  if (type === "create") createFileInputRef.current?.click();
+  else editFileInputRef.current?.click();
+};
 
+const handleFileUpload = async (e, type = "create") => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    const fileUrl = res.data.url;
+
+    const editorRef = type === "create" ? createEditorRef.current : editEditorRef.current;
+    if (!editorRef) return;
+
+    let insertHTML = "";
+
+    if (file.type.startsWith("image/")) {
+      insertHTML = `<img src="${fileUrl}" alt="attachment" class="my-2 max-w-full rounded-lg" />`;
+    } else if (file.type === "application/pdf") {
+      // PDF as non-editable link
+      insertHTML = `
+        <div contenteditable="false" class="my-2 p-2 border rounded-lg bg-gray-50 flex items-center gap-2">
+          <span>📄</span>
+          <a href="${fileUrl}" target="_blank" class="text-blue-600 underline">${file.name}</a>
+        </div>
+        <div><br></div> <!-- Move cursor to next line -->
+      `;
+    } else {
+      // Other files as editable link (optional)
+      insertHTML = `<a href="${fileUrl}" target="_blank" class="text-blue-600 underline">${file.name}</a><div><br></div>`;
+    }
+
+    editorRef.innerHTML += insertHTML;
+
+    if (type === "create") setContent(editorRef.innerHTML);
+    else setEditContent(editorRef.innerHTML);
+
+    // Place cursor after the newly inserted content
+    placeCaretAtEnd(editorRef);
+  } catch (err) {
+    console.error("File upload failed", err);
+    alert("Failed to upload file");
+  }
+};
   // Create note
   const handleCreateNote = async (e) => {
     e.preventDefault();
@@ -315,18 +369,42 @@ function placeCaretAtEnd(el) {
 };
 
 
+// Function to highlight matches inside preview only
+const getHighlightedContent = (html, word) => {
+  if (!word.trim()) return html; // no word to highlight, just return original HTML
 
-  // Function to highlight matches inside preview only
-  const getHighlightedContent = (html, word) => {
-  if (!word.trim()) return DOMPurify.sanitize(html);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
 
-  const cleanHtml = DOMPurify.sanitize(html);
+  const highlightText = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const regex = new RegExp(`(${word})`, "gi");
+      if (regex.test(node.textContent)) {
+        const frag = document.createDocumentFragment();
+        let lastIndex = 0;
+        node.textContent.replace(regex, (match, _, offset) => {
+          if (offset > lastIndex) {
+            frag.appendChild(document.createTextNode(node.textContent.slice(lastIndex, offset)));
+          }
+          const mark = document.createElement("mark");
+          mark.className = "bg-yellow-300";
+          mark.textContent = match;
+          frag.appendChild(mark);
+          lastIndex = offset + match.length;
+        });
+        if (lastIndex < node.textContent.length) {
+          frag.appendChild(document.createTextNode(node.textContent.slice(lastIndex)));
+        }
+        node.replaceWith(frag);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      node.childNodes.forEach(highlightText);
+    }
+  };
 
-  const regex = new RegExp(`(${word})`, "gi");
-  return cleanHtml.replace(
-    regex,
-    '<mark class="bg-yellow-300">$1</mark>'
-  );
+  doc.body.childNodes.forEach(highlightText);
+
+  return doc.body.innerHTML;
 };
 
 
@@ -442,6 +520,8 @@ function placeCaretAtEnd(el) {
     <button onClick={() => format("justifyLeft", null, "create")}>☰⬅</button>
     <button onClick={() => format("justifyCenter", null, "create")}>☰</button>
     <button onClick={() => format("justifyRight", null, "create")}>➡☰</button>
+    <button type="button" onClick={() => triggerFileInput("create")} title="Attach File">📎</button>
+
   </div>
 )}
 
@@ -449,7 +529,7 @@ function placeCaretAtEnd(el) {
 <div
   ref={createEditorRef}
   contentEditable
-  className="w-full flex-1 px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+  className="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh] overflow-y-auto"
   suppressContentEditableWarning={true}
   onInput={(e) => {
     const html = e.currentTarget.innerHTML;
@@ -739,6 +819,8 @@ function placeCaretAtEnd(el) {
     <button onClick={() => format("justifyLeft", null, "edit")}>☰⬅</button>
     <button onClick={() => format("justifyCenter", null, "edit")}>☰</button>
     <button onClick={() => format("justifyRight", null, "edit")}>➡☰</button>
+    <button type="button" onClick={() => triggerFileInput("edit")} title="Attach File">📎</button>
+
   </div>
 )}
 
@@ -746,7 +828,7 @@ function placeCaretAtEnd(el) {
 <div
   ref={editEditorRef}
   contentEditable
-  className="w-full p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh]"
+  className="w-full p-4 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all h-[60vh] overflow-y-auto"
   suppressContentEditableWarning={true}
   onInput={(e) => {
     const html = e.currentTarget.innerHTML;
@@ -853,8 +935,25 @@ function placeCaretAtEnd(el) {
           </div>
         </div>
       )}
+      {/* Hidden file input for Create */}
+<input
+  type="file"
+  ref={createFileInputRef}
+  className="hidden"
+  onChange={(e) => handleFileUpload(e, "create")}
+/>
+
+{/* Hidden file input for Edit */}
+<input
+  type="file"
+  ref={editFileInputRef}
+  className="hidden"
+  onChange={(e) => handleFileUpload(e, "edit")}
+/>
+
     </div>
   );
 }
 
 export default Notes;
+

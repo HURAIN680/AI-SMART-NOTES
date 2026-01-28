@@ -7,9 +7,9 @@ import {
 } from "../services/ai.service.js";
 
 
+
 export const createNote = async (req, res) => {
   try {
-    
     const { title, content } = req.body;
 
     if (!content) {
@@ -17,11 +17,13 @@ export const createNote = async (req, res) => {
     }
 
     const summary = await generateSummary(content);
-    const aiTitle = title || await generateTitle(content);
+    const aiTitle = title || (await generateTitle(content));
     const tags = await generateTags(content);
 
+  
+
     const note = await Note.create({
-      userId: new mongoose.Types.ObjectId(req.user._id),
+      userId: req.user._id,
       title: aiTitle,
       content,
       summary,
@@ -83,30 +85,19 @@ export const getNoteById = async (req, res) => {
 export const updateNote = async (req, res) => {
   try {
     const { title, content } = req.body;
-
     const updateData = {};
 
-    // Update title only if provided
-    if (title !== undefined) {
-      updateData.title = title;
-    }
+    if (title !== undefined) updateData.title = title;
 
-    // Update content AND regenerate summary
     if (content !== undefined) {
       updateData.content = content;
       updateData.summary = await generateSummary(content);
-    }
-
-    // regenerate title if title is empty or not provided or updated content to update title 
-    if (title === undefined || title.trim() === "") {
-      updateData.title = await generateTitle(content);
-    }
-    
-    //update tags if content is updated
-    if (content !== undefined) {
       updateData.tags = await generateTags(content);
     }
 
+    if (!title || title.trim() === "") {
+      updateData.title = await generateTitle(content);
+    }
 
     const note = await Note.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
@@ -114,16 +105,15 @@ export const updateNote = async (req, res) => {
       { new: true }
     );
 
-    if (!note) {
-      return res.status(404).json({ message: "Note not found" });
-    }
+    if (!note) return res.status(404).json({ message: "Note not found" });
 
     res.json(note);
   } catch (error) {
-    console.error(error.message);
+    console.error("UPDATE NOTE ERROR:", error);
     res.status(500).json({ message: "Failed to update note" });
   }
 };
+
 
 // DELETE NOTE
 export const deleteNote = async (req, res) => {
@@ -142,40 +132,5 @@ export const deleteNote = async (req, res) => {
     res.status(500).json({ message: "Failed to delete note" });
   }
 };
-
-
-
-export const uploadFileToNote = async (req, res) => {
-  try {
-    const note = await Note.findOne({
-      _id: req.params.id,
-      userId: req.user.id
-    });
-
-    if (!note) return res.status(404).json({ message: "Note not found" });
-
-    const result = await cloudinary.uploader.upload_stream(
-      { resource_type: "auto" },
-      async (error, result) => {
-        if (error) throw error;
-
-        note.files.push({
-          url: result.secure_url,
-          publicId: result.public_id,
-          originalName: req.file.originalname,
-          type: req.file.mimetype
-        });
-
-        await note.save();
-        res.json(note);
-      }
-    );
-
-    result.end(req.file.buffer);
-  } catch (err) {
-    res.status(500).json({ message: "File upload failed" });
-  }
-};
-
 
 
