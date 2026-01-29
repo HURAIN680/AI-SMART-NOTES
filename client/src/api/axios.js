@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://ai-smart-notes.onrender.com/api",
+  baseURL: "https://ai-smart-notes-b.onrender.com/api",
 });
 
 api.interceptors.request.use((config) => {
