@@ -36,8 +36,6 @@ AI Smart Notes revolutionizes note-taking by leveraging artificial intelligence 
 
 ### 🔐 Security & Performance
 - **JWT Authentication** — Secure user authentication with access and refresh tokens
-- **Encrypted Storage** — Notes stored securely in MongoDB Atlas with encryption at rest
-- **TLS Connections** — All data transmitted over secure connections
 - **Session Management** — Automatic token refresh for seamless user experience
 
 ### 🎨 User Experience
