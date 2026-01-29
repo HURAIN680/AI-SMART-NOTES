@@ -369,31 +369,6 @@ Authorization: Bearer {access_token}
 
 ---
 
-## 🎯 Roadmap
-
-### Phase 1 - Current ✅
-- [x] Basic CRUD operations
-- [x] AI-generated metadata
-- [x] User authentication
-- [x] Responsive design
-
-### Phase 2 - In Progress 🚧
-- [ ] Search functionality
-- [ ] Note filtering by tags
-- [ ] Dark mode
-- [ ] Note sharing
-
-### Phase 3 - Planned 📋
-- [ ] Collaborative notes
-- [ ] Rich text editor
-- [ ] File attachments
-- [ ] Export notes (PDF, Markdown)
-- [ ] AI chat for note insights
-- [ ] Voice-to-text notes
-- [ ] Mobile app (React Native)
-
----
-
 ## 🤝 Contributing
 
 Contributions are what make the open-source community amazing! Any contributions you make are **greatly appreciated**.
