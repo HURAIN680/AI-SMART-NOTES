@@ -6,7 +6,7 @@ AI Smart Notes is a smart note-taking app that uses AI to automatically generate
 
 🚀 Live Demo
 
-🔗 Coming Soon
+🔗 https://ai-smart-notes-frontend.onrender.com/
 
 ⸻
 
