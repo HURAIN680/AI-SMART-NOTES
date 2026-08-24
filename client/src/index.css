@@ -1,2 +1,9 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode — theme.js toggles the `dark` class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Smooth dark mode transition */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}

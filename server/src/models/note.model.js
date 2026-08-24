@@ -27,6 +27,10 @@ const noteSchema = new mongoose.Schema(
     isDeleted: {
         type: Boolean,
         default: false
+    },
+    color: {
+        type: String,
+        default: "default"
     }
 },
 { timestamps: true }
