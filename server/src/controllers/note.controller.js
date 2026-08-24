@@ -50,7 +50,8 @@ export const getNotes = async (req, res) => {
     if (search && search.trim() !== "") {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
-        { content: { $regex: search, $options: "i" } }
+        { content: { $regex: search, $options: "i" } },
+        { tags: { $regex: search, $options: "i" } }
       ];
     }
 

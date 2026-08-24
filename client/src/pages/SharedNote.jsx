@@ -1,9 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/axios";
 import { FileText, Tag, Calendar, Share2 } from "lucide-react";
 import DOMPurify from "dompurify";
-
 
 function SharedNote() {
   const { id } = useParams();
@@ -11,8 +10,9 @@ function SharedNote() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    axios
-      .get(`https://ai-smart-notes-b.onrender.com/api/notes/share/${id}`)
+    // Uses the configured api instance (not raw axios with hardcoded URL)
+    api
+      .get(`/notes/share/${id}`)
       .then((res) => setNote(res.data))
       .catch((err) => {
         setError(err.response?.data?.message || "Failed to load note");
@@ -66,10 +66,9 @@ function SharedNote() {
               </div>
               <div className="prose prose-lg max-w-none">
                 <div
-  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
-  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }}
-></div>
-
+                  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content) }}
+                ></div>
               </div>
             </div>
 
@@ -80,13 +79,12 @@ function SharedNote() {
                   <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
                     <FileText className="w-4 h-4 text-white" />
                   </div>
-                  Summary
+                  AI Summary
                 </h2>
                 <div
-  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
-  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.summary) }}
-></div>
-
+                  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.summary) }}
+                ></div>
               </div>
             )}
 
@@ -101,7 +99,7 @@ function SharedNote() {
                   {note.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-md hover:shadow-lg transition-shadow"
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-md"
                     >
                       #{tag}
                     </span>
@@ -114,13 +112,14 @@ function SharedNote() {
             <div className="flex items-center gap-2 text-sm text-gray-500 pt-6 border-t border-gray-200">
               <Calendar className="w-4 h-4" />
               <span>
-                Created on {new Date(note.createdAt).toLocaleString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
+                Created on{" "}
+                {new Date(note.createdAt).toLocaleString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </span>
             </div>
@@ -129,9 +128,7 @@ function SharedNote() {
 
         {/* Footer Badge */}
         <div className="text-center">
-          <p className="text-sm text-gray-500">
-            This note has been shared with you
-          </p>
+          <p className="text-sm text-gray-500">This note has been shared with you</p>
         </div>
       </div>
     </div>
