@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axios";
-import { UserPlus, Mail, Lock, User, Sparkles, ArrowLeft } from "lucide-react";
+import { UserPlus, Mail, Lock, User, Sparkles, ArrowLeft, ArrowRight, ShieldCheck, Sun, Moon } from "lucide-react";
+import toast from "react-hot-toast";
 
-function Register() {
+export default function Register() {
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
@@ -11,6 +12,27 @@ function Register() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") || "light";
+    const isDark = savedTheme === "dark";
+    setDarkMode(isDark);
+    if (isDark) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, []);
+
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    if (next) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,168 +46,159 @@ function Register() {
         password,
       });
 
+      toast.success("Account created successfully! Please sign in.");
       navigate("/login");
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          "Registration failed. Please try again."
+        err.response?.data?.message || "Registration failed. Please try again."
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackToHome = () => {
-    navigate("/");
-  };
-
-  const handleGoToLogin = () => {
-    navigate("/login");
-  };
-
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-950">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-fuchsia-500/20 to-cyan-500/20" />
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans select-none flex flex-col justify-between p-4 sm:p-6 transition-colors duration-200 relative overflow-hidden">
+      
+      {/* Background soft ambient orbs */}
+      <div className="absolute top-10 right-10 w-96 h-96 bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Floating orbs */}
-      <div className="absolute top-20 right-20 w-72 h-72 bg-violet-500/30 rounded-full blur-3xl animate-pulse" />
-      <div
-        className="absolute bottom-20 left-20 w-96 h-96 bg-fuchsia-500/20 rounded-full blur-3xl animate-pulse"
-        style={{ animationDelay: "1s" }}
-      />
+      {/* Top Header Controls */}
+      <div className="max-w-6xl w-full mx-auto flex items-center justify-between z-10">
+        <button
+          onClick={() => navigate("/")}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white shadow-xs transition group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Home</span>
+        </button>
 
-      {/* Back button */}
-      <button
-        onClick={handleBackToHome}
-        className="absolute top-8 left-8 z-20 flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white transition-colors group"
-      >
-        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-        <span>Back to Home</span>
-      </button>
+        <button
+          onClick={toggleDarkMode}
+          className="p-2 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+          title="Toggle Theme"
+        >
+          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+        </button>
+      </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
-            {/* Header */}
-            <div className="p-8 text-center border-b border-white/10">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl mb-4">
-                <UserPlus className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-2">
-                Create Account
-              </h2>
-              <p className="text-slate-400">
-                Join thousands of smart note-takers
-              </p>
+      {/* Center Auth Card */}
+      <div className="w-full max-w-md mx-auto my-auto z-10 py-6">
+        <div className="rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden p-6 sm:p-8">
+          
+          {/* Brand Header */}
+          <div className="text-center mb-6 space-y-2">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold text-xl shadow-lg shadow-indigo-500/25 mb-1">
+              ⁕
             </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="p-8 space-y-5">
-              {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-xl">
-                  <p className="text-red-300 text-sm text-center">{error}</p>
-                </div>
-              )}
-
-              {/* Name */}
-              <Input
-                label="Full Name"
-                icon={<User />}
-                type="text"
-                value={name}
-                onChange={setName}
-                placeholder="Enter your name"
-              />
-
-              {/* Email */}
-              <Input
-                label="Email Address"
-                icon={<Mail />}
-                type="email"
-                value={email}
-                onChange={setEmail}
-                placeholder="Enter your email"
-              />
-
-              {/* Password */}
-              <Input
-                label="Password"
-                icon={<Lock />}
-                type="password"
-                value={password}
-                onChange={setPassword}
-                placeholder="Create a password"
-                helper="Must be at least 6 characters"
-              />
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-violet-500/50 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  <>
-                    Create Account
-                    <Sparkles className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-
-              {/* Login */}
-              <div className="pt-4 text-center border-t border-white/10">
-                <p className="text-slate-400 text-sm">
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={handleGoToLogin}
-                    className="text-violet-400 hover:text-violet-300 font-semibold"
-                  >
-                    Sign In
-                  </button>
-                </p>
-              </div>
-            </form>
-
-            <div className="h-1 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-cyan-600" />
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Create Account
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Start building your smart workspace and collaborative canvas
+            </p>
           </div>
 
-          <p className="text-center text-slate-500 text-xs mt-6">
-            By creating an account, you agree to our Terms & Privacy Policy
-          </p>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-2xl text-xs font-semibold text-rose-600 dark:text-rose-400 text-center">
+                {error}
+              </div>
+            )}
+
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-500/20 hover:scale-[1.01] active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <span>Creating Account...</span>
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            {/* Sign in redirect */}
+            <div className="pt-3 text-center border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Sign In
+              </Link>
+            </div>
+          </form>
+
         </div>
       </div>
+
+      {/* Footer Security Badge */}
+      <div className="text-center text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 z-10">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+        <span>Your data is encrypted & protected</span>
+      </div>
+
     </div>
   );
 }
-
-function Input({ label, icon, type, value, onChange, placeholder, helper }) {
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-slate-300">{label}</label>
-      <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400">
-          {icon}
-        </div>
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:bg-white/10 transition"
-          required
-        />
-      </div>
-      {helper && <p className="text-xs text-slate-500">{helper}</p>}
-    </div>
-  );
-}
-
-export default Register;

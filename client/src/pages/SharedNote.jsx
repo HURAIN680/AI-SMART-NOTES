@@ -72,22 +72,6 @@ function SharedNote() {
               </div>
             </div>
 
-            {/* Summary Section */}
-            {note.summary && (
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 mb-8 border border-amber-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-white" />
-                  </div>
-                  AI Summary
-                </h2>
-                <div
-                  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.summary) }}
-                ></div>
-              </div>
-            )}
-
             {/* Tags Section */}
             {note.tags?.length > 0 && (
               <div className="mb-8">

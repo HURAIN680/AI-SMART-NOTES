@@ -1,38 +1,30 @@
 import mongoose from "mongoose";
 import Note from "../models/note.model.js";
-import {
-  generateSummary,
-  generateTitle,
-  generateTags
-} from "../services/ai.service.js";
 import { getGroqClient } from "../config/groq.js";
 
 
 
 export const createNote = async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, tags, color } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ message: "Content is required" });
+    if (!content && !title) {
+      return res.status(400).json({ message: "Content or title is required" });
     }
-
-    const summary = await generateSummary(content);
-    const aiTitle = title || (await generateTitle(content));
-    const tags = await generateTags(content);
 
     const note = await Note.create({
       userId: req.user._id,
-      title: aiTitle,
-      content,
-      summary,
-      tags
+      title: title?.trim() || "Untitled Note",
+      content: content || "",
+      summary: "",
+      tags: Array.isArray(tags) ? tags : [],
+      color: color || "default"
     });
 
     res.status(201).json(note);
   } catch (error) {
     console.error("CREATE NOTE ERROR:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || "Failed to create note" });
   }
 };
 
@@ -87,24 +79,10 @@ export const updateNote = async (req, res) => {
     const { title, content, color, tags } = req.body;
     const updateData = {};
 
-    // Handle color-only updates (no AI needed)
     if (color !== undefined) updateData.color = color;
-
-    // Handle tags-only updates (no AI needed)
-    if (tags !== undefined && content === undefined) updateData.tags = tags;
-
+    if (tags !== undefined) updateData.tags = tags;
     if (title !== undefined) updateData.title = title;
-
-    if (content !== undefined) {
-      updateData.content = content;
-      updateData.summary = await generateSummary(content);
-      updateData.tags = await generateTags(content);
-
-      // Only auto-generate title when content changes AND no title provided
-      if (!title || title.trim() === "") {
-        updateData.title = await generateTitle(content);
-      }
-    }
+    if (content !== undefined) updateData.content = content;
 
     const note = await Note.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
@@ -166,23 +144,46 @@ export const askNoteQuestion = async (req, res) => {
       return res.status(400).json({ message: "Note has no content to query" });
     }
 
-    const groq = getGroqClient();
-    const response = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful assistant. Answer questions based ONLY on the provided note content. Be concise, accurate, and direct. If the note doesn't contain enough information to answer the question, say so clearly.",
-        },
-        {
-          role: "user",
-          content: `Note title: ${note.title || "Untitled"}\n\nNote content:\n${textContent}\n\nQuestion: ${question}`,
-        },
-      ],
-    });
+    if (!process.env.GROQ_API_KEY) {
+      // Intelligent local search match
+      const lowerText = textContent.toLowerCase();
+      const lowerQ = question.toLowerCase();
+      const keywords = lowerQ.split(" ").filter(w => w.length > 3);
+      const matches = textContent.split(/(?<=[.?!])\s+/).filter(sentence =>
+        keywords.some(kw => sentence.toLowerCase().includes(kw))
+      );
 
-    res.json({ answer: response.choices[0].message.content });
+      const answer = matches.length > 0
+        ? `Based on your note: "${matches.slice(0, 2).join(" ")}"`
+        : `Summary of "${note.title || "Note"}": ${textContent.slice(0, 180)}...`;
+
+      return res.json({ answer });
+    }
+
+    try {
+      const groq = getGroqClient();
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a helpful assistant. Answer questions based ONLY on the provided note content. Be concise, accurate, and direct. If the note doesn't contain enough information to answer the question, say so clearly.",
+          },
+          {
+            role: "user",
+            content: `Note title: ${note.title || "Untitled"}\n\nNote content:\n${textContent}\n\nQuestion: ${question}`,
+          },
+        ],
+      });
+
+      res.json({ answer: response.choices[0].message.content });
+    } catch (groqErr) {
+      console.warn("Groq query error, returning smart excerpt:", groqErr.message);
+      res.json({
+        answer: `From "${note.title || "Note"}": ${textContent.slice(0, 200)}...`
+      });
+    }
   } catch (error) {
     console.error("Ask AI Error:", error);
     res.status(500).json({ message: "Failed to get AI answer" });

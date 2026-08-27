@@ -1,19 +1,35 @@
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Notes from "./pages/Notes";
 import Home from "./pages/Home";
+import Canvas from "./pages/Canvas";
 import SharedNote from "./pages/SharedNote";
 
-const isAuthenticated = () => {
-  return !!localStorage.getItem("token");
-};
+// Component-based Protected Route evaluated dynamically on navigation
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// Redirect already logged in users away from auth pages
+function PublicOnlyRoute({ children }) {
+  const token = localStorage.getItem("token");
+  if (token) {
+    return <Navigate to="/notes" replace />;
+  }
+  return children;
+}
 
 function App() {
   return (
     <BrowserRouter>
-      {/* Global toast notifications — available everywhere */}
+      {/* Global toast notifications */}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -37,17 +53,43 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicOnlyRoute>
+              <Register />
+            </PublicOnlyRoute>
+          }
+        />
 
-        {/* Protected route — fix: only one definition, with auth guard */}
+        {/* Protected routes */}
         <Route
           path="/notes"
-          element={isAuthenticated() ? <Notes /> : <Navigate to="/login" replace />}
+          element={
+            <ProtectedRoute>
+              <Notes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/canvas"
+          element={
+            <ProtectedRoute>
+              <Canvas />
+            </ProtectedRoute>
+          }
         />
 
         <Route path="/share/:id" element={<SharedNote />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
