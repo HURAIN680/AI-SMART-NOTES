@@ -1,5 +1,4 @@
 
-
 import express from 'express';
 import cors from 'cors';
 import authRoutes from '../src/routes/auth.routes.js';
@@ -9,7 +8,31 @@ import uploadRoutes from '../src/routes/upload.routes.js';
 
 const app = express();
 
-app.use(cors());
+// ── CORS ───────────────────────────────────────────────────────────────────
+// Build the allowed-origins list from the FRONTEND_URL env var.
+// Multiple origins can be separated by commas, e.g.:
+//   FRONTEND_URL=https://ai-smart-notes-frontend.onrender.com,http://localhost:5173
+const rawOrigins = process.env.FRONTEND_URL || 'http://localhost:5173';
+const allowedOrigins = rawOrigins.split(',').map((o) => o.trim());
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin "${origin}" not allowed`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+);
+
+// Explicitly handle preflight OPTIONS for all routes
+app.options('*', cors());
+// ──────────────────────────────────────────────────────────────────────────
+
 app.use(express.json());
 
 // ── Health-check endpoint ──────────────────────────────────────────────────
