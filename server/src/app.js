@@ -30,7 +30,8 @@ app.use(
 );
 
 // Explicitly handle preflight OPTIONS for all routes
-app.options('*', cors());
+// Note: bare '*' is invalid in path-to-regexp v8+; use a regex instead
+app.options(/\/.*/, cors());
 // ──────────────────────────────────────────────────────────────────────────
 
 app.use(express.json());
