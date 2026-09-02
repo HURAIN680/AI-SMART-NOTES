@@ -26,12 +26,10 @@ app.use(
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
+    preflightContinue: false,   // let cors() respond to OPTIONS automatically
+    optionsSuccessStatus: 204,  // some browsers choke on 200 for OPTIONS
   })
 );
-
-// Explicitly handle preflight OPTIONS for all routes
-// Note: bare '*' is invalid in path-to-regexp v8+; use a regex instead
-app.options(/\/.*/, cors());
 // ──────────────────────────────────────────────────────────────────────────
 
 app.use(express.json());
